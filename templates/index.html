@@ -1,29 +1,12 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ config.title }}{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    {% block extra_head %}{% endblock %}
-</head>
-<body class="bg-gray-50">
-    {% block content %}{% endblock %}
-    {% block scripts %}{% endblock %}
-</body>
-</html>
-
-# templates/index.html
 {% extends "base.html" %}
 
-<!-- {% block title %}🏢 SIRH RAG - {{ config.company_name }}{% endblock %} -->
+{% block title %}{{ config.title }} - {{ config.company_name }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="bg-gradient-to-r from-blue-800 to-green-600 text-white p-8 rounded-lg shadow-lg mb-8">
-        <h1 class="text-4xl font-bold mb-2">🤖 Assistant RH Intelligent</h1>
+        <h1 class="text-4xl font-bold mb-2">{{ config.title }}</h1>
         <h2 class="text-2xl mb-4">{{ config.company_name }} - {{ config.company_sector }}</h2>
         <p class="text-lg opacity-90">{{ config.subtitle }}</p>
     </div>
@@ -49,10 +32,10 @@
                         id="userInput" 
                         placeholder="Tapez votre question ici..."
                         class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onkeypress="if(event.key==='Enter') sendMessage()"
+                        onkeypress="if(event.key==='Enter') ChatManager.sendMessage()"
                     >
                     <button 
-                        onclick="sendMessage()"
+                        onclick="ChatManager.sendMessage()"
                         class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                     >
                         Envoyer
@@ -74,7 +57,7 @@
                 <h3 class="text-lg font-semibold mb-4">💡 Exemples</h3>
                 <div class="space-y-2">
                     {% for example in config.examples %}
-                    <button onclick="askExample('{{ example }}')" 
+                    <button onclick="ChatManager.askExample('{{ example|e }}')" 
                             class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
                         {{ example }}
                     </button>
@@ -89,11 +72,18 @@
                     <div class="text-sm text-gray-500">Chargement...</div>
                 </div>
             </div>
+            
+            <!-- Lien admin -->
+            <div class="mt-6">
+                <a href="/admin" class="block text-center p-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition">
+                    ⚙️ Administration
+                </a>
+            </div>
         </div>
     </div>
 </div>
-<!-- {% endblock %} -->
+{% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', path='/js/chat.js') }}"></script>
-<!-- {% endblock %} -->
+{% endblock %}

@@ -1,0 +1,417 @@
+# =============================================================================
+# CORRECTIONS SIRH RAG - Templates et JavaScript
+# =============================================================================
+
+## 1. STRUCTURE CORRIGÉE DES TEMPLATES
+
+### templates/base.html (Template de base corrigé)
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ config.title }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    {% block content %}{% endblock %}
+    
+    <!-- Scripts globaux -->
+    <script src="{{ url_for('static', path='/js/components.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+```
+
+### templates/index.html (Page principale corrigée)
+```html
+{% extends "base.html" %}
+
+{% block title %}{{ config.title }} - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-800 to-green-600 text-white p-8 rounded-lg shadow-lg mb-8">
+        <h1 class="text-4xl font-bold mb-2">{{ config.title }}</h1>
+        <h2 class="text-2xl mb-4">{{ config.company_name }} - {{ config.company_sector }}</h2>
+        <p class="text-lg opacity-90">{{ config.subtitle }}</p>
+    </div>
+
+    <!-- Interface de chat -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <!-- Chat principal -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">💬 Chat RH</h3>
+                
+                <!-- Messages -->
+                <div id="messages" class="h-96 overflow-y-auto mb-4 p-4 bg-gray-50 rounded border">
+                    <div class="text-gray-500 text-center">
+                        Posez votre première question sur les données RH...
+                    </div>
+                </div>
+                
+                <!-- Input -->
+                <div class="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="userInput" 
+                        placeholder="Tapez votre question ici..."
+                        class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onkeypress="if(event.key==='Enter') ChatManager.sendMessage()"
+                    >
+                    <button 
+                        onclick="ChatManager.sendMessage()"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    >
+                        Envoyer
+                    </button>
+                </div>
+                
+                <!-- Loading indicator -->
+                <div id="loading" class="hidden mt-4 text-center">
+                    <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="ml-2">Recherche en cours...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <!-- Exemples -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4">💡 Exemples</h3>
+                <div class="space-y-2">
+                    {% for example in config.examples %}
+                    <button onclick="ChatManager.askExample('{{ example|e }}')" 
+                            class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
+                        {{ example }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Statistiques -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">📊 Statistiques</h3>
+                <div id="stats" class="space-y-2">
+                    <div class="text-sm text-gray-500">Chargement...</div>
+                </div>
+            </div>
+            
+            <!-- Lien admin -->
+            <div class="mt-6">
+                <a href="/admin" class="block text-center p-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition">
+                    ⚙️ Administration
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/chat.js') }}"></script>
+{% endblock %}
+```
+
+### templates/admin.html (Page admin corrigée)
+```html
+{% extends "base.html" %}
+
+{% block title %}Admin - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Admin -->
+    <div class="bg-gradient-to-r from-purple-800 to-indigo-600 text-white p-8 rounded-lg shadow-lg mb-8">
+        <h1 class="text-4xl font-bold mb-2">⚙️ Administration SIRH</h1>
+        <h2 class="text-2xl mb-4">{{ config.company_name }}</h2>
+        <p class="text-lg opacity-90">Gestion et monitoring du système RAG</p>
+        <a href="/" class="inline-block mt-4 px-4 py-2 bg-white text-purple-800 rounded hover:bg-gray-100">
+            ← Retour au chat
+        </a>
+    </div>
+
+    <!-- Contenu admin (reste identique) -->
+    <!-- ... -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/admin.js') }}"></script>
+{% endblock %}
+```
+
+## 2. JAVASCRIPT CORRIGÉ
+
+### static/js/chat.js (Refactorisé)
+```javascript
+// =============================================================================
+// static/js/chat.js - Gestionnaire de chat principal
+// =============================================================================
+
+const ChatManager = {
+    messageCount: 0,
+    isLoading: false,
+
+    init() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.loadStats();
+            this.setupEventListeners();
+        });
+    },
+
+    setupEventListeners() {
+        const input = document.getElementById('userInput');
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !this.isLoading) {
+                    this.sendMessage();
+                }
+            });
+        }
+    },
+
+    async sendMessage() {
+        const input = document.getElementById('userInput');
+        const question = input.value.trim();
+        
+        if (!question || this.isLoading) return;
+        
+        this.isLoading = true;
+        
+        // Afficher le message utilisateur
+        this.addMessage('user', question);
+        input.value = '';
+        
+        // Afficher le loading
+        this.showLoading(true);
+        
+        try {
+            const response = await axios.post('/query', {
+                question: question,
+                include_sources: true
+            });
+            
+            // Afficher la réponse
+            this.addMessage('assistant', response.data.answer, response.data);
+            
+        } catch (error) {
+            console.error('Erreur requête:', error);
+            this.addMessage('assistant', 
+                `Désolé, une erreur s'est produite: ${error.response?.data?.detail || error.message}`
+            );
+        } finally {
+            this.showLoading(false);
+            this.isLoading = false;
+        }
+    },
+
+    addMessage(role, content, metadata = null) {
+        const messagesDiv = document.getElementById('messages');
+        
+        // Supprimer le message de bienvenue
+        if (this.messageCount === 0) {
+            messagesDiv.innerHTML = '';
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `mb-4 ${role === 'user' ? 'text-right' : 'text-left'} chat-message`;
+        
+        let metadataHtml = '';
+        if (metadata && role === 'assistant') {
+            metadataHtml = `
+                <div class="mt-2 text-xs text-gray-500">
+                    <span class="bg-gray-200 px-2 py-1 rounded mr-2">📊 ${metadata.query_type}</span>
+                    <span class="bg-gray-200 px-2 py-1 rounded mr-2">📚 ${metadata.sources.length} sources</span>
+                    <span class="bg-gray-200 px-2 py-1 rounded">⏱️ ${metadata.response_time}s</span>
+                </div>
+            `;
+        }
+        
+        messageDiv.innerHTML = `
+            <div class="inline-block max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                role === 'user' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-white border border-gray-200'
+            }">
+                ${this.escapeHtml(content)}
+                ${metadataHtml}
+            </div>
+        `;
+        
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        this.messageCount++;
+    },
+
+    showLoading(show) {
+        const loading = document.getElementById('loading');
+        if (loading) {
+            loading.classList.toggle('hidden', !show);
+        }
+    },
+
+    askExample(question) {
+        const input = document.getElementById('userInput');
+        if (input) {
+            input.value = question;
+            this.sendMessage();
+        }
+    },
+
+    async loadStats() {
+        try {
+            const [statusResponse, deptResponse] = await Promise.all([
+                axios.get('/status'),
+                axios.get('/departments')
+            ]);
+            
+            const status = statusResponse.data;
+            const departments = deptResponse.data;
+            
+            const statsDiv = document.getElementById('stats');
+            if (!statsDiv) return;
+            
+            const totalEmployees = departments.reduce((sum, dept) => sum + dept.count, 0);
+            
+            statsDiv.innerHTML = `
+                <div class="text-sm space-y-2">
+                    <div class="flex justify-between">
+                        <span>👥 Employés</span>
+                        <span class="font-medium">${totalEmployees}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>🏛️ Départements</span>
+                        <span class="font-medium">${departments.length}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📄 Documents</span>
+                        <span class="font-medium">${status.documents_indexed}</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t">
+                        <span class="text-xs text-green-600">✅ Système opérationnel</span>
+                    </div>
+                </div>
+            `;
+            
+        } catch (error) {
+            console.error('Erreur chargement stats:', error);
+            const statsDiv = document.getElementById('stats');
+            if (statsDiv) {
+                statsDiv.innerHTML = '<div class="text-sm text-red-500">Erreur de chargement</div>';
+            }
+        }
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+};
+
+// Initialisation
+ChatManager.init();
+
+// Export global pour compatibilité
+window.ChatManager = ChatManager;
+```
+
+## 3. SUPPRESSION DES FICHIERS REDONDANTS
+
+À supprimer :
+- `templates/xbase.html` (doublon avec base.html)
+- `templates/chat_message.html` (non utilisé, intégré dans le JS)
+- Code dupliqué dans `static/js/admin.js` (utiliser les composants partagés)
+
+## 4. AMÉLIORATION DE rag/api.py
+
+```python
+# rag/api.py (partie templates corrigée)
+
+def get_template_config():
+    """Prépare la configuration pour les templates"""
+    base_config = get_config()
+    rag_cfg = base_config.get('rag', {})
+    interface_cfg = rag_cfg.get('interface', {})
+    
+    return {
+        'title': interface_cfg.get('title', 'SIRH RAG'),
+        'subtitle': interface_cfg.get('subtitle', 'Assistant RH Intelligent'),
+        'company_name': base_config['entreprise']['nom'],
+        'company_sector': base_config['entreprise']['secteur'],
+        'examples': interface_cfg.get('examples', [
+            "Combien d'employés en R&D ?",
+            "Qui sont les top performers ?",
+            "Compétences IA disponibles ?",
+            "Formations en leadership ?"
+        ])
+    }
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    """Page d'accueil avec interface web"""
+    config = get_template_config()
+    return templates.TemplateResponse(
+        "index.html", 
+        {"request": request, "config": config}
+    )
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin(request: Request):
+    """Page d'administration"""
+    config = get_template_config()
+    return templates.TemplateResponse(
+        "admin.html", 
+        {"request": request, "config": config}
+    )
+```
+
+## 5. STRUCTURE FINALE RECOMMANDÉE
+
+```
+templates/
+├── base.html           # Template de base
+├── index.html          # Page principale (chat)
+└── admin.html          # Page administration
+
+static/
+├── css/
+│   └── style.css       # Styles personnalisés
+└── js/
+    ├── components.js   # Composants réutilisables
+    ├── chat.js        # Logique du chat
+    └── admin.js       # Logique admin
+
+rag/
+├── api.py             # API FastAPI
+├── chain.py           # Chaîne RAG
+├── config.py          # Configuration
+├── document_loader.py # Chargeur documents
+├── embeddings.py      # Embeddings
+├── sql_retriever.py   # Requêtes SQL
+└── vectorstore.py     # Base vectorielle
+```
+
+## 6. COMMANDES DE NETTOYAGE
+
+```bash
+# Supprimer les fichiers redondants
+rm templates/xbase.html
+rm templates/chat_message.html
+
+# Nettoyer les imports Python
+find . -name "*.py" -exec sed -i '/^$/d' {} \;
+
+# Vérifier la structure
+tree -I '__pycache__|*.pyc|.git' templates/ static/
+```
+
+Cette refactorisation élimine les redondances, améliore la maintenabilité et suit les bonnes pratiques FastAPI/Jinja2.
