@@ -68,3 +68,15 @@ Le fichier `config.yaml` permet de paramétrer entièrement l'entreprise simulé
 
 Cette architecture vous permet de générer une entreprise complète et cohérente en **15-20 minutes** avec des données parfaitement structurées pour votre démo RAG !
 
+# RAG
+COMMANDES :
+## Génération complète des données
+python main.py 0 1 2 3 4 5 6 7 --raz
+
+## Démarrage de l'API RAG
+python start_rag_api.py --dev
+
+## URLs disponibles :
+## http://localhost:8000         -> Interface web
+## http://localhost:8000/docs    -> Documentation API
+## http://localhost:8000/query   -> Endpoint principal

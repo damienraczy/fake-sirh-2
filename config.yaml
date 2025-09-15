@@ -1,4 +1,4 @@
-# config.yaml
+# config.yaml (version étendue)
 entreprise:
   nom: "Flow Solutions"
   secteur: "Green Energy post AI"
@@ -27,7 +27,7 @@ entreprise:
     taux_turnover: "15%"
     budget_formation: "500000 XPF/employee/year"
     cycle_performance: "Annual cycle with quarterly check-ins"
-    ratio_hommes: 0.60  # 60% d'hommes, 40% de femmes
+    ratio_hommes: 0.60
   
   technique:
     domaine_email: "flowsolutions.nc"
@@ -35,3 +35,28 @@ entreprise:
   base_de_données:
     chemin: "db"
     nom: "fake_sirh.sqlite"
+
+# 🆕 CONFIGURATION RAG
+rag:
+  # Configuration technique
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  vector_store_path: "data/vector_store"
+  chunk_size: 1000
+  chunk_overlap: 200
+  top_k_docs: 5
+  
+  # Configuration LLM (hérite de la config existante)
+  temperature: 0.1
+  max_tokens: 1000
+  
+  # Configuration interface
+  interface:
+    title: "🏢 SIRH RAG - Flow Solutions"
+    subtitle: "Assistant RH Intelligent"
+    port: 8501
+    examples:
+      - "Combien d'employés travaillent en R&D ?"
+      - "Qui sont les meilleurs performeurs cette année ?"
+      - "Quelles sont les compétences les plus demandées ?"
+      - "Résumé des formations en leadership"
+      - "Analyse du feedback des équipes"

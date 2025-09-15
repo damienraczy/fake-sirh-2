@@ -1,10 +1,13 @@
-# main.py (mise à jour)
+# =============================================================================
+# main.py étendu - SIRH + RAG FastAPI (version courte)
+# =============================================================================
+
 import sys
 import os
-import time
 import argparse
 from pathlib import Path
 import shutil
+import subprocess
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -18,65 +21,73 @@ from etapes import e05_formations_developpement as etape5
 from etapes import e06_feedback_documents as etape6
 from utils.validation import validate_database
 
-def run_all_steps():
-    """
-    Fonction principale qui orchestre l'exécution de toutes les étapes de génération.
-    """
-    ap = argparse.ArgumentParser(description="Générateur SIRH de démonstration")
-    ap.add_argument("steps", nargs='*', help="Etapes à effectuer (0-6)", default=['0','1','2','3','4','5','6'])
-    ap.add_argument("--yaml", required=False, help="Chemin du YAML de configuration", default="config.yaml")
-    ap.add_argument("--sql", required=False, help="Chemin du schéma SQL SQLite", default="schema.sql")
-    ap.add_argument("--raz", action="store_true", help="Supprimer la base existante avant de créer")
-    ap.add_argument("--validate", action="store_true", help="Valider la cohérence après génération")
+def run_rag_indexation():
+    """Étape 7: Indexation RAG"""
+    print("Étape 7: Indexation RAG des données")
+    try:
+        from rag.chain import SIRHRAGChain
+        from rag.config import RAGConfig
+        
+        base_config = get_config()
+        rag_config = RAGConfig.from_base_config(base_config)
+        rag_chain = SIRHRAGChain(rag_config)
+        
+        print("✅ Système RAG initialisé et indexé")
+        
+    except ImportError:
+        print("⚠️ Dépendances RAG manquantes. Installez: pip install fastapi uvicorn langchain sentence-transformers chromadb")
+    except Exception as e:
+        print(f"❌ Erreur indexation RAG: {e}")
+
+def launch_rag_api(port=8000):
+    """Lance l'API RAG"""
+    try:
+        print(f"🚀 Lancement API RAG sur http://localhost:{port}")
+        subprocess.run([sys.executable, "-m", "uvicorn", "rag.api:app", f"--port={port}", "--reload"])
+    except Exception as e:
+        print(f"❌ Erreur lancement API: {e}")
+
+def main():
+    ap = argparse.ArgumentParser(description="Générateur SIRH + RAG")
+    ap.add_argument("steps", nargs='*', help="Étapes (0-7)", default=['0','1','2','3','4','5','6'])
+    ap.add_argument("--yaml", default="config.yaml", help="Config YAML")
+    ap.add_argument("--sql", default="schema.sql", help="Schéma SQL") 
+    ap.add_argument("--raz", action="store_true", help="Reset base")
+    ap.add_argument("--validate", action="store_true", help="Valider")
+    ap.add_argument("--start-api", action="store_true", help="Lancer API RAG")
+    ap.add_argument("--port", type=int, default=8000, help="Port API")
+    
     args = ap.parse_args()
 
     if args.raz:
-        db_path = Path("db")
-        if db_path.exists():
-            print(f"[RAZ] Suppression de la base existante: {db_path}")
-            shutil.rmtree(db_path)
-        data_path = Path("data")
-        if data_path.exists() and data_path.is_dir():
-            print(f"[RAZ] Suppression du répertoire data/")
-            shutil.rmtree(data_path)
+        for path in ["db", "data"]:
+            if Path(path).exists():
+                shutil.rmtree(path)
+                print(f"[RAZ] {path} supprimé")
 
-    start_time = time.time()
-    print("================================================")
-    print("= Générateur de Données SIRH Fictif - v2 =")
-    print("================================================")
-
+    print("🏢 Générateur SIRH + RAG FastAPI")
     load_config(config_path=args.yaml)
 
     steps = {
-        '0': etape0.run,     # initialisation de la base
-        '1': etape1.run,     # structure organisationnelle
-        '2': etape2.run,     # population et hiérarchie
-        '3': etape3.run,     # compétences et référentiels
-        '4': etape4.run,     # objectifs et performance
-        '5': etape5.run,     # formations et développement
-        '6': etape6.run      # feedback et documents
+        '0': lambda: etape0.run(schema_path=args.sql),
+        '1': etape1.run, '2': etape2.run, '3': etape3.run,
+        '4': etape4.run, '5': etape5.run, '6': etape6.run,
+        '7': run_rag_indexation
     }
 
-    try:
-        for step_num in args.steps:
-            if step_num == '0':
-                print(f"\n================== ÉTAPE {step_num} ==================")
-                steps[step_num](schema_path=args.sql)
-            else:
-                print(f"\n================== ÉTAPE {step_num} ==================")
-                steps[step_num]()
+    # Exécution des étapes
+    for step in args.steps:
+        if step in steps:
+            print(f"\n=== ÉTAPE {step} ===")
+            steps[step]()
 
-        if args.validate:
-            print("\n================== VALIDATION ==================")
-            validate_database()
+    if args.validate:
+        print("\n=== VALIDATION ===")
+        validate_database()
 
-    except Exception as e:
-        print(f"\nERREUR FATALE: {e}")
-        import traceback
-        traceback.print_exc()
-
-    end_time = time.time()
-    print(f"\nGénération terminée en {end_time - start_time:.2f} secondes.")
+    if args.start_api:
+        print("\n=== LANCEMENT API ===")
+        launch_rag_api(args.port)
 
 if __name__ == "__main__":
-    run_all_steps()
+    main()
