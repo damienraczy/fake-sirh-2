@@ -1,21 +1,23 @@
 # config.yaml
 entreprise:
-  nom: "TechFlow Solutions"
-  secteur: "Software Development"
+  nom: "Flow Solutions"
+  secteur: "Green Energy post AI"
   taille: 150
   culture: "Innovation-driven, remote-friendly"
   etape_croissance: "Scale-up"
   defis:
-    - "High turnover"
-    - "Skill gaps in AI/ML"
+    - "Shortage of local skilled labor"
+    - "High cost of training"
     - "Remote team management"
   
   structure_organisationnelle:
     departements:
-      - "Engineering"
-      - "Sales" 
-      - "Marketing"
-      - "Human Resources"
+      - "R&D"
+      - "Wind Power"
+      - "Solar Power"
+      - "Electrical"
+      - "Community Relations"
+      - "HR"
       - "Finance"
     niveaux_hierarchiques: 4
     style_management: "Flat hierarchy"
@@ -23,8 +25,12 @@ entreprise:
   contexte_rh:
     anciennete_moyenne: "2.5 years"
     taux_turnover: "15%"
-    budget_formation: "2000€/employee/year"
-    cycle_performance: "Annual + quarterly check-ins"
+    budget_formation: "500000 XPF/employee/year"
+    cycle_performance: "Annual cycle with quarterly check-ins"
+    ratio_hommes: 0.60  # 60% d'hommes, 40% de femmes
+  
+  technique:
+    domaine_email: "flowsolutions.nc"
   
   base_de_données:
     chemin: "db"

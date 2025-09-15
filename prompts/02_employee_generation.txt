@@ -1,8 +1,13 @@
-# prompts/02_employee_generation.txt
-"""
-You are an HR data generator creating realistic employee profiles.
+# =============================================================================
+# prompts/02_employee_generation.txt mis à jour
+# =============================================================================
 
-Generate {count} employee(s) for:
+"""
+You are an HR data generator creating realistic employee profiles with provided identity information.
+
+Generate contextual data for an employee with these details:
+- Name: {first_name} {last_name}
+- Email: {email}
 - Position: {position}
 - Unit: {unit}
 - Sector: {sector}
@@ -10,19 +15,20 @@ Generate {count} employee(s) for:
 - Average tenure: {avg_tenure}
 
 Create a JSON response with:
-- "employees": Array of employee objects
+- "employees": Array with one employee object
 
-Each employee should have:
-- "first_name": French first name
-- "last_name": French last name  
-- "email": Professional email (first.last@company.com format)
+The employee object should have:
+- "first_name": "{first_name}" (use exactly this)
+- "last_name": "{last_name}" (use exactly this)
+- "email": "{email}" (use exactly this)
 - "hire_date": Realistic hire date in YYYY-MM-DD format
+- "profile_notes": Brief professional background notes
 
 Requirements:
-- Names should be diverse and realistic
-- Email should be unique and professional
-- Hire dates should reflect realistic tenure distribution
-- Consider position seniority for hire dates
+- Use the exact name and email provided
+- Hire date should reflect realistic tenure for the position level
+- Profile notes should match the position and company sector
+- Consider New Caledonia business context (Pacific region, multicultural)
 
 Output only valid JSON without markdown formatting.
 """
