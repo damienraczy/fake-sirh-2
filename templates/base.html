@@ -12,7 +12,7 @@
 <body class="bg-gray-50">
     {% block content %}{% endblock %}
     
-    <!-- Scripts globaux -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     <script src="{{ url_for('static', path='/js/components.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

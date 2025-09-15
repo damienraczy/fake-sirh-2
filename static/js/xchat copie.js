@@ -5,11 +5,9 @@
 const ChatManager = {
     messageCount: 0,
     isLoading: false,
-    converter: null,
 
     init() {
         document.addEventListener('DOMContentLoaded', () => {
-            this.converter = new showdown.Converter();
             this.loadStats();
             this.setupEventListeners();
         });
@@ -83,15 +81,13 @@ const ChatManager = {
             `;
         }
         
-        const contentHtml = role === 'assistant' ? this.converter.makeHtml(content) : this.escapeHtml(content);
-
         messageDiv.innerHTML = `
             <div class="inline-block max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                 role === 'user' 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-white border border-gray-200'
             }">
-                ${contentHtml}
+                ${this.escapeHtml(content)}
                 ${metadataHtml}
             </div>
         `;
