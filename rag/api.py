@@ -1,9 +1,10 @@
 # =============================================================================
-# rag/api.py - API FastAPI principale
+# rag/api.py - API FastAPI avec templates séparés
 # =============================================================================
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,55 +23,7 @@ from rag.chain import SIRHRAGChain
 from rag.sql_retriever import SIRHSQLRetriever
 
 # =============================================================================
-# Modèles Pydantic
-# =============================================================================
-
-class QueryRequest(BaseModel):
-    """Requête utilisateur"""
-    question: str
-    context: Optional[str] = None
-    include_sources: bool = True
-
-class QueryResponse(BaseModel):
-    """Réponse du système RAG"""
-    answer: str
-    sources: List[str]
-    query_type: str
-    context_used: bool
-    response_time: float
-    confidence: Optional[float] = None
-
-class EmployeeInfo(BaseModel):
-    """Information employé"""
-    id: int
-    first_name: str
-    last_name: str
-    email: str
-    position: Optional[str] = None
-    department: Optional[str] = None
-
-class DepartmentStats(BaseModel):
-    """Statistiques département"""
-    department: str
-    count: int
-
-class PerformanceInfo(BaseModel):
-    """Information de performance"""
-    first_name: str
-    last_name: str
-    score: int
-    title: Optional[str] = None
-    department: Optional[str] = None
-
-class SystemStatus(BaseModel):
-    """Statut du système"""
-    status: str
-    documents_indexed: int
-    system_ready: bool
-    version: str = "1.0.0"
-
-# =============================================================================
-# Application FastAPI
+# Configuration FastAPI
 # =============================================================================
 
 app = FastAPI(
@@ -81,22 +34,68 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Middleware CORS pour le frontend
+# Configuration des templates et fichiers statiques
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En prod, spécifier les domaines autorisés
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Variables globales pour les instances
+# =============================================================================
+# Modèles Pydantic (inchangés)
+# =============================================================================
+
+class QueryRequest(BaseModel):
+    question: str
+    context: Optional[str] = None
+    include_sources: bool = True
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: List[str]
+    query_type: str
+    context_used: bool
+    response_time: float
+    confidence: Optional[float] = None
+
+class EmployeeInfo(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    email: str
+    position: Optional[str] = None
+    department: Optional[str] = None
+
+class DepartmentStats(BaseModel):
+    department: str
+    count: int
+
+class PerformanceInfo(BaseModel):
+    first_name: str
+    last_name: str
+    score: int
+    title: Optional[str] = None
+    department: Optional[str] = None
+
+class SystemStatus(BaseModel):
+    status: str
+    documents_indexed: int
+    system_ready: bool
+    version: str = "1.0.0"
+
+# Variables globales
 rag_chain: Optional[SIRHRAGChain] = None
 sql_retriever: Optional[SIRHSQLRetriever] = None
 rag_config: Optional[RAGConfig] = None
 
 # =============================================================================
-# Gestion de l'initialisation
+# Initialisation
 # =============================================================================
 
 @app.on_event("startup")
@@ -107,11 +106,9 @@ async def startup_event():
     try:
         print("🚀 Initialisation du système RAG...")
         
-        # Charger la configuration
         base_config = get_config()
         rag_config = RAGConfig.from_base_config(base_config)
         
-        # Initialiser les composants
         rag_chain = SIRHRAGChain(rag_config)
         sql_retriever = SIRHSQLRetriever(rag_config)
         
@@ -122,239 +119,59 @@ async def startup_event():
         raise
 
 def get_rag_chain():
-    """Dependency injection pour la chaîne RAG"""
     if rag_chain is None:
         raise HTTPException(status_code=503, detail="Système RAG non initialisé")
     return rag_chain
 
 def get_sql_retriever():
-    """Dependency injection pour le retrieveur SQL"""
     if sql_retriever is None:
         raise HTTPException(status_code=503, detail="Retrieveur SQL non initialisé")
     return sql_retriever
 
+def get_template_config():
+    """Prépare la configuration pour les templates"""
+    base_config = get_config()
+    rag_cfg = base_config.get('rag', {})
+    interface_cfg = rag_cfg.get('interface', {})
+    
+    return {
+        'title': interface_cfg.get('title', 'SIRH RAG'),
+        'subtitle': interface_cfg.get('subtitle', 'Assistant RH Intelligent'),
+        'company_name': base_config['entreprise']['nom'],
+        'company_sector': base_config['entreprise']['secteur'],
+        'examples': interface_cfg.get('examples', [
+            "Combien d'employés en R&D ?",
+            "Qui sont les top performers ?",
+            "Compétences IA disponibles ?",
+            "Formations en leadership ?"
+        ])
+    }
+
 # =============================================================================
-# Routes API
+# Routes Web (Templates)
 # =============================================================================
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def home(request: Request):
     """Page d'accueil avec interface web"""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>🏢 SIRH RAG - Flow Solutions</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    </head>
-    <body class="bg-gray-50">
-        <div class="container mx-auto px-4 py-8">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-blue-800 to-green-600 text-white p-8 rounded-lg shadow-lg mb-8">
-                <h1 class="text-4xl font-bold mb-2">🤖 Assistant RH Intelligent</h1>
-                <h2 class="text-2xl mb-4">Flow Solutions - Green Energy post AI</h2>
-                <p class="text-lg opacity-90">Explorez vos données RH avec l'intelligence artificielle</p>
-            </div>
+    config = get_template_config()
+    return templates.TemplateResponse(
+        "index.html", 
+        {"request": request, "config": config}
+    )
 
-            <!-- Interface de chat -->
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <!-- Chat principal -->
-                <div class="lg:col-span-3">
-                    <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h3 class="text-xl font-semibold mb-4">💬 Chat RH</h3>
-                        
-                        <!-- Messages -->
-                        <div id="messages" class="h-96 overflow-y-auto mb-4 p-4 bg-gray-50 rounded border">
-                            <div class="text-gray-500 text-center">
-                                Posez votre première question sur les données RH...
-                            </div>
-                        </div>
-                        
-                        <!-- Input -->
-                        <div class="flex gap-2">
-                            <input 
-                                type="text" 
-                                id="userInput" 
-                                placeholder="Tapez votre question ici..."
-                                class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                onkeypress="if(event.key==='Enter') sendMessage()"
-                            >
-                            <button 
-                                onclick="sendMessage()"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                            >
-                                Envoyer
-                            </button>
-                        </div>
-                        
-                        <!-- Loading indicator -->
-                        <div id="loading" class="hidden mt-4 text-center">
-                            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                            <span class="ml-2">Recherche en cours...</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Sidebar -->
-                <div class="lg:col-span-1">
-                    <!-- Exemples -->
-                    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">💡 Exemples</h3>
-                        <div class="space-y-2">
-                            <button onclick="askExample('Combien d\\'employés en R&D ?')" 
-                                    class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
-                                👥 Employés en R&D
-                            </button>
-                            <button onclick="askExample('Qui sont les top performers ?')" 
-                                    class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
-                                🏆 Top performers
-                            </button>
-                            <button onclick="askExample('Compétences IA disponibles ?')" 
-                                    class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
-                                🧠 Compétences IA
-                            </button>
-                            <button onclick="askExample('Formations en leadership ?')" 
-                                    class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
-                                📚 Formations leadership
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Statistiques -->
-                    <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h3 class="text-lg font-semibold mb-4">📊 Statistiques</h3>
-                        <div id="stats" class="space-y-2">
-                            <div class="text-sm text-gray-500">Chargement...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+@app.get("/admin", response_class=HTMLResponse)
+async def admin(request: Request):
+    """Page d'administration"""
+    config = get_template_config()
+    return templates.TemplateResponse(
+        "admin.html", 
+        {"request": request, "config": config}
+    )
 
-        <script>
-            // Variables globales
-            let messageCount = 0;
-
-            // Initialisation
-            document.addEventListener('DOMContentLoaded', function() {
-                loadStats();
-            });
-
-            // Envoyer un message
-            async function sendMessage() {
-                const input = document.getElementById('userInput');
-                const question = input.value.trim();
-                
-                if (!question) return;
-                
-                // Afficher le message utilisateur
-                addMessage('user', question);
-                input.value = '';
-                
-                // Afficher le loading
-                showLoading(true);
-                
-                try {
-                    const response = await axios.post('/query', {
-                        question: question,
-                        include_sources: true
-                    });
-                    
-                    // Afficher la réponse
-                    addMessage('assistant', response.data.answer, response.data);
-                    
-                } catch (error) {
-                    addMessage('assistant', 'Désolé, une erreur s\\'est produite: ' + error.message);
-                } finally {
-                    showLoading(false);
-                }
-            }
-
-            // Ajouter un message à l'interface
-            function addMessage(role, content, metadata = null) {
-                const messagesDiv = document.getElementById('messages');
-                
-                // Supprimer le message de bienvenue si c'est le premier message
-                if (messageCount === 0) {
-                    messagesDiv.innerHTML = '';
-                }
-                
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `mb-4 ${role === 'user' ? 'text-right' : 'text-left'}`;
-                
-                let metadataHtml = '';
-                if (metadata && role === 'assistant') {
-                    metadataHtml = `
-                        <div class="mt-2 text-xs text-gray-500">
-                            <span class="bg-gray-200 px-2 py-1 rounded mr-2">📊 ${metadata.query_type}</span>
-                            <span class="bg-gray-200 px-2 py-1 rounded mr-2">📚 ${metadata.sources.length} sources</span>
-                            <span class="bg-gray-200 px-2 py-1 rounded">⏱️ ${metadata.response_time}s</span>
-                        </div>
-                    `;
-                }
-                
-                messageDiv.innerHTML = `
-                    <div class="inline-block max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        role === 'user' 
-                            ? 'bg-blue-600 text-white' 
-                            : 'bg-white border border-gray-200'
-                    }">
-                        ${content}
-                        ${metadataHtml}
-                    </div>
-                `;
-                
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                messageCount++;
-            }
-
-            // Afficher/masquer le loading
-            function showLoading(show) {
-                const loading = document.getElementById('loading');
-                loading.classList.toggle('hidden', !show);
-            }
-
-            // Exemple rapide
-            function askExample(question) {
-                document.getElementById('userInput').value = question;
-                sendMessage();
-            }
-
-            // Charger les statistiques
-            async function loadStats() {
-                try {
-                    const [statusResponse, deptResponse] = await Promise.all([
-                        axios.get('/status'),
-                        axios.get('/departments')
-                    ]);
-                    
-                    const status = statusResponse.data;
-                    const departments = deptResponse.data;
-                    
-                    const statsDiv = document.getElementById('stats');
-                    const totalEmployees = departments.reduce((sum, dept) => sum + dept.count, 0);
-                    
-                    statsDiv.innerHTML = `
-                        <div class="text-sm">
-                            <div class="font-medium">👥 ${totalEmployees} employés</div>
-                            <div class="font-medium">🏛️ ${departments.length} départements</div>
-                            <div class="font-medium">📄 ${status.documents_indexed} documents</div>
-                            <div class="mt-2 text-xs text-green-600">✅ Système opérationnel</div>
-                        </div>
-                    `;
-                    
-                } catch (error) {
-                    console.error('Erreur chargement stats:', error);
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
+# =============================================================================
+# Routes API (inchangées)
+# =============================================================================
 
 @app.post("/query", response_model=QueryResponse)
 async def query(
@@ -416,7 +233,6 @@ async def get_employees(
 ):
     """Retourne la liste des employés"""
     try:
-        # Requête SQL adaptée
         if department:
             query = f"""
             SELECT e.id, e.first_name, e.last_name, e.email, 
@@ -490,8 +306,20 @@ async def search_employees(
 async def reindex_documents(chain: SIRHRAGChain = Depends(get_rag_chain)):
     """Réindexe tous les documents"""
     try:
-        # Note: Cette méthode devra être implémentée dans SIRHRAGChain
-        # chain.reindex_documents()
-        return {"message": "Réindexation lancée", "status": "success"}
+        chain.reindex_documents()
+        return {"message": "Réindexation terminée", "status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur réindexation: {str(e)}")
+
+# =============================================================================
+# Routes utilitaires
+# =============================================================================
+
+@app.get("/health")
+async def health_check():
+    """Vérification de santé de l'API"""
+    return {"status": "healthy", "timestamp": "2025-01-15T10:30:00Z"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

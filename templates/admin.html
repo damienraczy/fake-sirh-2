@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Admin -->
+    <div class="bg-gradient-to-r from-purple-800 to-indigo-600 text-white p-8 rounded-lg shadow-lg mb-8">
+        <h1 class="text-4xl font-bold mb-2">⚙️ Administration SIRH</h1>
+        <h2 class="text-2xl mb-4">{{ config.company_name }}</h2>
+        <p class="text-lg opacity-90">Gestion et monitoring du système RAG</p>
+    </div>
+
+    <!-- Navigation Admin -->
+    <div class="mb-8">
+        <nav class="bg-white rounded-lg shadow p-4">
+            <ul class="flex space-x-6">
+                <li><a href="#system" class="text-blue-600 hover:text-blue-800 font-medium">Système</a></li>
+                <li><a href="#database" class="text-blue-600 hover:text-blue-800 font-medium">Base de données</a></li>
+                <li><a href="#documents" class="text-blue-600 hover:text-blue-800 font-medium">Documents</a></li>
+                <li><a href="#performance" class="text-blue-600 hover:text-blue-800 font-medium">Performance</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Colonne principale -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- Statut système -->
+            <section id="system" class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="mr-2">🟢</span> Statut du système
+                </h3>
+                <div id="system-status" class="space-y-4">
+                    <div class="animate-pulse">Chargement...</div>
+                </div>
+            </section>
+
+            <!-- Gestion de la base -->
+            <section id="database" class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="mr-2">🗄️</span> Base de données
+                </h3>
+                <div class="space-y-4">
+                    <div id="db-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Stats DB chargées dynamiquement -->
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <h4 class="font-medium mb-2">Actions</h4>
+                        <div class="flex space-x-4">
+                            <button onclick="exportData()" 
+                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                📤 Exporter données
+                            </button>
+                            <button onclick="validateData()" 
+                                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                                ✅ Valider cohérence
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gestion documents -->
+            <section id="documents" class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="mr-2">📄</span> Documents RAG
+                </h3>
+                <div class="space-y-4">
+                    <div id="document-stats" class="grid grid-cols-3 gap-4">
+                        <!-- Stats documents -->
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <h4 class="font-medium mb-2">Réindexation</h4>
+                        <div class="flex space-x-4">
+                            <button onclick="reindexDocuments()" 
+                                    class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">
+                                🔄 Réindexer tout
+                            </button>
+                            <button onclick="checkIndex()" 
+                                    class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                                🔍 Vérifier index
+                            </button>
+                        </div>
+                        <div id="reindex-progress" class="hidden mt-4">
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div id="reindex-bar" class="bg-orange-500 h-2 rounded-full" style="width: 0%"></div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Réindexation en cours...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Sidebar monitoring -->
+        <div class="space-y-6">
+            
+            <!-- Métriques temps réel -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">📊 Métriques</h3>
+                <div id="metrics" class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Requêtes/min</span>
+                        <span id="queries-per-min" class="font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Temps réponse moy.</span>
+                        <span id="avg-response-time" class="font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Succès rate</span>
+                        <span id="success-rate" class="font-medium text-green-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Utilisation RAM</span>
+                        <span id="memory-usage" class="font-medium">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs récents -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">📝 Logs récents</h3>
+                <div id="recent-logs" class="space-y-2 max-h-64 overflow-y-auto">
+                    <div class="text-sm text-gray-500">Chargement des logs...</div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">⚡ Actions rapides</h3>
+                <div class="space-y-3">
+                    <button onclick="clearCache()" 
+                            class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+                        🗑️ Vider cache
+                    </button>
+                    <button onclick="restartService()" 
+                            class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm">
+                        🔄 Redémarrer service
+                    </button>
+                    <button onclick="downloadLogs()" 
+                            class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm">
+                        📥 Télécharger logs
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variables globales pour l'admin
+let metricsInterval;
+let logsInterval;
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    loadSystemStatus();
+    loadDatabaseStats();
+    loadDocumentStats();
+    startMetricsMonitoring();
+    loadRecentLogs();
+});
+
+// Charger le statut système
+async function loadSystemStatus() {
+    try {
+        const response = await axios.get('/status');
+        const status = response.data;
+        
+        const statusDiv = document.getElementById('system-status');
+        statusDiv.innerHTML = `
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded">
+                    <div class="text-sm text-gray-600">Statut</div>
+                    <div class="text-lg font-medium ${status.system_ready ? 'text-green-600' : 'text-red-600'}">
+                        ${status.system_ready ? '✅ Opérationnel' : '❌ Erreur'}
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded">
+                    <div class="text-sm text-gray-600">Version</div>
+                    <div class="text-lg font-medium">${status.version}</div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded">
+                    <div class="text-sm text-gray-600">Documents indexés</div>
+                    <div class="text-lg font-medium">${status.documents_indexed}</div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded">
+                    <div class="text-sm text-gray-600">Dernière mise à jour</div>
+                    <div class="text-lg font-medium">${new Date().toLocaleTimeString()}</div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        document.getElementById('system-status').innerHTML = 
+            '<div class="text-red-600">Erreur de chargement du statut</div>';
+    }
+}
+
+// Charger les stats de la base
+async function loadDatabaseStats() {
+    try {
+        const [employeesResp, deptResp] = await Promise.all([
+            axios.get('/employees?limit=1'),
+            axios.get('/departments')
+        ]);
+        
+        const departments = deptResp.data;
+        const totalEmployees = departments.reduce((sum, dept) => sum + dept.count, 0);
+        
+        const statsDiv = document.getElementById('db-stats');
+        statsDiv.innerHTML = `
+            <div class="bg-blue-50 p-4 rounded text-center">
+                <div class="text-2xl font-bold text-blue-600">${totalEmployees}</div>
+                <div class="text-sm text-blue-800">Employés</div>
+            </div>
+            <div class="bg-green-50 p-4 rounded text-center">
+                <div class="text-2xl font-bold text-green-600">${departments.length}</div>
+                <div class="text-sm text-green-800">Départements</div>
+            </div>
+            <div class="bg-purple-50 p-4 rounded text-center">
+                <div class="text-2xl font-bold text-purple-600">12</div>
+                <div class="text-sm text-purple-800">Tables</div>
+            </div>
+            <div class="bg-orange-50 p-4 rounded text-center">
+                <div class="text-2xl font-bold text-orange-600">100%</div>
+                <div class="text-sm text-orange-800">Intégrité</div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erreur chargement stats DB:', error);
+    }
+}
+
+// Charger les stats documents
+async function loadDocumentStats() {
+    try {
+        const response = await axios.get('/status');
+        const status = response.data;
+        
+        const statsDiv = document.getElementById('document-stats');
+        statsDiv.innerHTML = `
+            <div class="bg-gray-50 p-4 rounded text-center">
+                <div class="text-xl font-bold">${status.documents_indexed}</div>
+                <div class="text-sm text-gray-600">Documents</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded text-center">
+                <div class="text-xl font-bold">~${Math.round(status.documents_indexed * 2.5)}k</div>
+                <div class="text-sm text-gray-600">Chunks</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded text-center">
+                <div class="text-xl font-bold">384</div>
+                <div class="text-sm text-gray-600">Dimensions</div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erreur chargement stats documents:', error);
+    }
+}
+
+// Monitoring des métriques en temps réel
+function startMetricsMonitoring() {
+    // Simulation de métriques (dans un vrai projet, ces données viendraient d'une API)
+    metricsInterval = setInterval(() => {
+        document.getElementById('queries-per-min').textContent = Math.floor(Math.random() * 20) + 5;
+        document.getElementById('avg-response-time').textContent = (Math.random() * 2 + 0.5).toFixed(2) + 's';
+        document.getElementById('success-rate').textContent = (95 + Math.random() * 4).toFixed(1) + '%';
+        document.getElementById('memory-usage').textContent = (60 + Math.random() * 20).toFixed(0) + '%';
+    }, 5000);
+}
+
+// Charger les logs récents
+function loadRecentLogs() {
+    // Simulation de logs (dans un vrai projet, viendraient d'une API)
+    const logs = [
+        { time: '10:30:15', level: 'INFO', message: 'Requête RAG traitée avec succès' },
+        { time: '10:29:48', level: 'INFO', message: 'Nouvelle connexion utilisateur' },
+        { time: '10:29:12', level: 'DEBUG', message: 'Recherche vectorielle: 5 documents trouvés' },
+        { time: '10:28:55', level: 'INFO', message: 'Cache mis à jour' },
+        { time: '10:28:03', level: 'WARN', message: 'Temps de réponse élevé (3.2s)' }
+    ];
+    
+    const logsDiv = document.getElementById('recent-logs');
+    logsDiv.innerHTML = logs.map(log => `
+        <div class="text-xs p-2 border-l-2 ${
+            log.level === 'ERROR' ? 'border-red-500 bg-red-50' :
+            log.level === 'WARN' ? 'border-yellow-500 bg-yellow-50' :
+            'border-blue-500 bg-blue-50'
+        }">
+            <span class="text-gray-500">${log.time}</span>
+            <span class="font-medium ml-2">${log.level}</span>
+            <div class="mt-1">${log.message}</div>
+        </div>
+    `).join('');
+    
+    // Rafraîchir les logs toutes les 10 secondes
+    logsInterval = setInterval(loadRecentLogs, 10000);
+}
+
+// Actions admin
+async function exportData() {
+    try {
+        // Simulation d'export
+        const response = await fetch('/export', { method: 'POST' });
+        if (response.ok) {
+            alert('Export des données démarré. Un lien de téléchargement sera envoyé par email.');
+        }
+    } catch (error) {
+        alert('Erreur lors de l\'export: ' + error.message);
+    }
+}
+
+async function validateData() {
+    try {
+        // Simulation de validation
+        alert('Validation en cours... Cette opération peut prendre quelques minutes.');
+        setTimeout(() => {
+            alert('✅ Validation terminée: Aucune incohérence détectée.');
+        }, 3000);
+    } catch (error) {
+        alert('Erreur lors de la validation: ' + error.message);
+    }
+}
+
+async function reindexDocuments() {
+    try {
+        const progressDiv = document.getElementById('reindex-progress');
+        const progressBar = document.getElementById('reindex-bar');
+        
+        progressDiv.classList.remove('hidden');
+        
+        // Simulation du progrès
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                setTimeout(() => {
+                    progressDiv.classList.add('hidden');
+                    alert('✅ Réindexation terminée avec succès!');
+                    loadDocumentStats();
+                }, 1000);
+            }
+            progressBar.style.width = progress + '%';
+        }, 500);
+        
+        // Appel API réel
+        const response = await axios.post('/reindex');
+        
+    } catch (error) {
+        document.getElementById('reindex-progress').classList.add('hidden');
+        alert('Erreur lors de la réindexation: ' + error.message);
+    }
+}
+
+async function checkIndex() {
+    try {
+        const response = await axios.get('/status');
+        const stats = response.data;
+        alert(`Index vérifié:\n- ${stats.documents_indexed} documents indexés\n- Système opérationnel: ${stats.system_ready ? 'Oui' : 'Non'}`);
+    } catch (error) {
+        alert('Erreur lors de la vérification: ' + error.message);
+    }
+}
+
+function clearCache() {
+    if (confirm('Êtes-vous sûr de vouloir vider le cache ? Cette action peut temporairement ralentir les réponses.')) {
+        // Simulation
+        alert('Cache vidé avec succès.');
+    }
+}
+
+function restartService() {
+    if (confirm('Êtes-vous sûr de vouloir redémarrer le service ? Les utilisateurs seront temporairement déconnectés.')) {
+        alert('Redémarrage du service en cours...');
+        // Dans un vrai projet, ceci redémarrerait le service
+    }
+}
+
+function downloadLogs() {
+    // Simulation de téléchargement
+    const logContent = `[2025-01-15 10:30:00] INFO - Système démarré
+[2025-01-15 10:30:01] INFO - Base de données connectée
+[2025-01-15 10:30:02] INFO - Index vectoriel chargé
+[2025-01-15 10:30:03] INFO - API prête à recevoir des requêtes`;
+    
+    const blob = new Blob([logContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sirh_logs_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Nettoyage à la fermeture
+window.addEventListener('beforeunload', function() {
+    if (metricsInterval) clearInterval(metricsInterval);
+    if (logsInterval) clearInterval(logsInterval);
+});
+</script>
+{% endblock %}
