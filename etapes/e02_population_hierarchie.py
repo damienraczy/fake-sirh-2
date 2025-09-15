@@ -1,11 +1,9 @@
 # =============================================================================
-# etapes/e02_population_hierarchie.py mis à jour
+# etapes/e02_population_hierarchie.py (version complète)
 # =============================================================================
 
-import json
 from database import get_connection
-from llm_client import generate_text
-from utils_llm import strip_markdown_fences
+from llm_client import generate_json, LLMError
 from config import get_config
 from utils.names_generator import NamesGenerator
 from datetime import datetime, timedelta
@@ -36,6 +34,10 @@ def run():
     cursor.execute("SELECT id, title FROM position")
     positions = cursor.fetchall()
     
+    if not units or not positions:
+        print("Erreur: Aucune unité ou position trouvée. Exécutez d'abord l'étape 1.")
+        return
+    
     # Lire le prompt pour la génération d'employés
     with open('prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
         prompt_template = f.read()
@@ -63,122 +65,150 @@ def run():
             email=email
         )
         
-        response = generate_text(context_prompt)
-        clean_response = strip_markdown_fences(response)
-        
+        # Tentative avec LLM (avec retry automatique)
         try:
-            employee_data = json.loads(clean_response)
-            employee_info = employee_data['employees'][0]
+            employee_data = generate_json(context_prompt)
             
-            # Utiliser les données locales + infos LLM
-            hire_date = employee_info.get('hire_date', 
-                (datetime.now() - timedelta(days=random.randint(30, 1000))).strftime('%Y-%m-%d'))
-            
-            # Insérer en base
-            cursor.execute("""
-                INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (prenom, nom, email, hire_date, manager_id))
-            
-            return cursor.lastrowid, prenom, nom
-            
-        except (json.JSONDecodeError, KeyError) as e:
-            print(f"Erreur parsing LLM pour {prenom} {nom}, utilisation des données par défaut")
-            
+            if 'employees' in employee_data and len(employee_data['employees']) > 0:
+                employee_info = employee_data['employees'][0]
+                hire_date = employee_info.get('hire_date', 
+                    (datetime.now() - timedelta(days=random.randint(30, 1000))).strftime('%Y-%m-%d'))
+                print(f"✓ Contexte LLM généré pour {prenom} {nom}")
+            else:
+                raise Exception("Structure JSON invalide")
+                
+        except (LLMError, Exception) as e:
+            print(f"⚠ Fallback pour {prenom} {nom}: {e}")
             # Fallback avec données par défaut
             hire_date = (datetime.now() - timedelta(days=random.randint(30, 1000))).strftime('%Y-%m-%d')
-            
-            cursor.execute("""
-                INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (prenom, nom, email, hire_date, manager_id))
-            
-            return cursor.lastrowid, prenom, nom
+        
+        # Insérer en base
+        cursor.execute("""
+            INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (prenom, nom, email, hire_date, manager_id))
+        
+        return cursor.lastrowid, prenom, nom
     
     try:
-        # Créer le DG
+        # Générer le directeur général d'abord
         print("Génération du directeur général...")
-        ceo_position = next((p for p in positions if "CEO" in p['title'] or "Director" in p['title']), 
-                           positions[0] if positions else None)
         
-        if ceo_position:
-            dg_id, dg_prenom, dg_nom = create_employee_with_local_name(
-                ceo_position['title'], 
-                "Direction Générale", 
-                is_manager=True
-            )
-            print(f"✓ DG créé: {dg_prenom} {dg_nom}")
-        else:
-            raise Exception("Aucune position de direction trouvée")
+        # Trouver une position de direction
+        ceo_position = next((p for p in positions if any(word in p['title'].upper() 
+                           for word in ['CEO', 'DIRECTOR', 'GENERAL', 'CHIEF'])), None)
         
-        # Créer les managers de département
+        if not ceo_position:
+            # Fallback: prendre la première position
+            ceo_position = positions[0]
+            print(f"Aucune position de direction trouvée, utilisation de: {ceo_position['title']}")
+        
+        dg_id, dg_prenom, dg_nom = create_employee_with_local_name(
+            ceo_position['title'], 
+            "Direction Générale",
+            is_manager=True
+        )
+        print(f"✓ DG créé: {dg_prenom} {dg_nom}")
+        
+        # Générer les managers de département
+        print("Génération des managers de département...")
         managers = {}
-        manager_positions = [p for p in positions if "Manager" in p['title'] or "Head" in p['title']]
+        manager_positions = [p for p in positions if any(word in p['title'].upper() 
+                           for word in ['MANAGER', 'HEAD', 'LEAD', 'SUPERVISOR'])]
         
-        for unit in units:
-            if unit['name'] not in ["Direction Générale", "Executive"]:
-                manager_pos = random.choice(manager_positions) if manager_positions else positions[0]
-                
-                manager_id, manager_prenom, manager_nom = create_employee_with_local_name(
-                    manager_pos['title'],
-                    unit['name'],
-                    is_manager=True,
-                    manager_id=dg_id
-                )
-                
-                managers[unit['id']] = manager_id
-                print(f"✓ Manager {unit['name']}: {manager_prenom} {manager_nom}")
-                
-                # Créer l'affectation du manager
-                cursor.execute("""
-                    INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
-                    VALUES (?, ?, ?, ?, NULL)
-                """, (manager_id, manager_pos['id'], unit['id'], 
-                      (datetime.now() - timedelta(days=random.randint(100, 800))).strftime('%Y-%m-%d')))
+        if not manager_positions:
+            # Fallback: utiliser des positions génériques
+            manager_positions = [p for p in positions if p['id'] != ceo_position['id']][:5]
         
-        # Créer les employés restants
-        remaining_employees = company_profile['taille'] - len(managers) - 1
-        employees_per_unit = max(1, remaining_employees // len(units))
+        units_with_managers = [u for u in units if u['name'] not in ["Direction Générale", "Executive"]]
         
-        print(f"Génération de {remaining_employees} employés...")
+        for unit in units_with_managers:
+            if manager_positions:
+                manager_pos = random.choice(manager_positions)
+            else:
+                manager_pos = random.choice(positions)
+            
+            manager_id, manager_prenom, manager_nom = create_employee_with_local_name(
+                manager_pos['title'],
+                unit['name'],
+                is_manager=True,
+                manager_id=dg_id
+            )
+            
+            managers[unit['id']] = manager_id
+            print(f"✓ Manager {unit['name']}: {manager_prenom} {manager_nom}")
+            
+            # Créer l'affectation du manager
+            manager_hire_date = (datetime.now() - timedelta(days=random.randint(100, 800))).strftime('%Y-%m-%d')
+            cursor.execute("""
+                INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
+                VALUES (?, ?, ?, ?, NULL)
+            """, (manager_id, manager_pos['id'], unit['id'], manager_hire_date))
         
-        for unit in units:
-            if unit['id'] in managers:  # Unités avec managers
-                unit_positions = [p for p in positions 
-                                if "Manager" not in p['title'] 
-                                and "Director" not in p['title'] 
-                                and "CEO" not in p['title']]
-                
-                if not unit_positions:
-                    unit_positions = [positions[0]]  # Fallback
-                
-                for _ in range(employees_per_unit):
-                    pos = random.choice(unit_positions)
+        # Générer les employés restants
+        print("Génération des employés...")
+        total_target = company_profile['taille']
+        current_count = len(managers) + 1  # +1 pour le DG
+        remaining_employees = max(0, total_target - current_count)
+        
+        if remaining_employees > 0:
+            # Répartir les employés entre les unités qui ont des managers
+            employees_per_unit = max(1, remaining_employees // len(managers)) if managers else 0
+            
+            print(f"Génération de {remaining_employees} employés restants...")
+            
+            for unit in units_with_managers:
+                if unit['id'] in managers:
+                    # Positions pour les employés (pas de managers)
+                    unit_positions = [p for p in positions 
+                                    if not any(word in p['title'].upper() 
+                                             for word in ['MANAGER', 'DIRECTOR', 'CEO', 'HEAD', 'CHIEF'])]
+                    
+                    if not unit_positions:
+                        # Fallback: utiliser toutes les positions sauf celle du DG
+                        unit_positions = [p for p in positions if p['id'] != ceo_position['id']]
+                    
                     manager_id = managers[unit['id']]
                     
-                    emp_id, emp_prenom, emp_nom = create_employee_with_local_name(
-                        pos['title'],
-                        unit['name'],
-                        manager_id=manager_id
-                    )
+                    # Créer les employés pour cette unité
+                    employees_for_this_unit = min(employees_per_unit, remaining_employees)
                     
-                    # Créer l'affectation
-                    cursor.execute("""
-                        INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
-                        VALUES (?, ?, ?, ?, NULL)
-                    """, (emp_id, pos['id'], unit['id'], 
-                          (datetime.now() - timedelta(days=random.randint(30, 600))).strftime('%Y-%m-%d')))
+                    for i in range(employees_for_this_unit):
+                        if unit_positions:
+                            pos = random.choice(unit_positions)
+                        else:
+                            pos = random.choice(positions)
+                        
+                        emp_id, emp_prenom, emp_nom = create_employee_with_local_name(
+                            pos['title'],
+                            unit['name'],
+                            manager_id=manager_id
+                        )
+                        
+                        # Créer l'affectation
+                        emp_hire_date = (datetime.now() - timedelta(days=random.randint(30, 600))).strftime('%Y-%m-%d')
+                        cursor.execute("""
+                            INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
+                            VALUES (?, ?, ?, ?, NULL)
+                        """, (emp_id, pos['id'], unit['id'], emp_hire_date))
+                        
+                        remaining_employees -= 1
+                        if remaining_employees <= 0:
+                            break
+                
+                if remaining_employees <= 0:
+                    break
         
         # Créer l'affectation du DG
-        if ceo_position:
-            dg_unit = next((u for u in units if "Direction" in u['name'] or "Executive" in u['name']), 
-                          units[0] if units else None)
-            if dg_unit:
-                cursor.execute("""
-                    INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
-                    VALUES (?, ?, ?, ?, NULL)
-                """, (dg_id, ceo_position['id'], dg_unit['id'], 
-                      (datetime.now() - timedelta(days=random.randint(365, 1500))).strftime('%Y-%m-%d')))
+        print("Affectation du directeur général...")
+        dg_unit = next((u for u in units if any(word in u['name'].upper() 
+                       for word in ['DIRECTION', 'EXECUTIVE', 'GENERAL'])), units[0])
+        
+        dg_hire_date = (datetime.now() - timedelta(days=random.randint(365, 1500))).strftime('%Y-%m-%d')
+        cursor.execute("""
+            INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
+            VALUES (?, ?, ?, ?, NULL)
+        """, (dg_id, ceo_position['id'], dg_unit['id'], dg_hire_date))
         
         conn.commit()
         
@@ -186,12 +216,34 @@ def run():
         cursor.execute("SELECT COUNT(*) FROM employee")
         total_employees = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM employee e JOIN assignment a ON e.id = a.employee_id WHERE a.end_date IS NULL")
+        cursor.execute("""
+            SELECT COUNT(*) FROM employee e 
+            JOIN assignment a ON e.id = a.employee_id 
+            WHERE a.end_date IS NULL
+        """)
         assigned_employees = cursor.fetchone()[0]
         
+        cursor.execute("""
+            SELECT COUNT(*) FROM employee 
+            WHERE manager_id IS NULL
+        """)
+        ceo_count = cursor.fetchone()[0]
+        
+        print(f"\n=== STATISTIQUES ===")
         print(f"✓ {total_employees} employés créés au total")
-        print(f"✓ {assigned_employees} employés avec affectations")
+        print(f"✓ {assigned_employees} employés avec affectations actives")
+        print(f"✓ {ceo_count} directeur général (manager_id = NULL)")
+        print(f"✓ {len(managers)} managers de département")
         print(f"✓ Ratio hommes/femmes appliqué: {ratio_hommes*100:.0f}%/{(1-ratio_hommes)*100:.0f}%")
+        print(f"✓ Domaine email: @{domaine_email}")
+        
+        # Vérification hiérarchique
+        cursor.execute("""
+            SELECT COUNT(*) FROM employee 
+            WHERE manager_id IS NOT NULL
+        """)
+        employees_with_manager = cursor.fetchone()[0]
+        print(f"✓ {employees_with_manager} employés avec un manager")
         
     except Exception as e:
         print(f"Erreur lors de la génération: {e}")

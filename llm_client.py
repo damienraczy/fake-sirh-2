@@ -1,33 +1,30 @@
-# llm_client.py
+# =============================================================================
+# llm_client.py (version corrigée)
+# =============================================================================
+
 import os
 import requests
 import json
+import time
 from dotenv import load_dotenv
+from utils_llm import strip_markdown_fences
 
-from config import load_config
-
-
-# Charger les variables d'environnement depuis le fichier .env
-# dotenv_path = load_dotenv(os.path.expanduser('~/env/.env'), override=True)
-# if os.path.exists(dotenv_path):
-#     load_dotenv(dotenv_path)
-# else:
-#     print("Attention: Fichier .env non trouvé. Utilisation des variables d'environnement système.")
-
+# Configuration API
 OLLAMA_API_URL = "https://ollama.com/api/generate"
 OLLAMA_MODEL = "gpt-oss:20b"
 load_dotenv(os.path.expanduser('~/env/.env'), override=True)
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
 
+class LLMError(Exception):
+    """Exception levée quand le LLM échoue après tous les retries"""
+    pass
 
 def generate_text(prompt: str):
     """
     Envoie un prompt au LLM via l'API Ollama et retourne le texte généré.
+    Version simple sans retry - pour la compatibilité.
     """
-    # print(f"Configuration LLM: API_URL={OLLAMA_API_URL}, MODEL={OLLAMA_MODEL}, OLLAMA_API_KEY={OLLAMA_API_KEY}")
-
     if not OLLAMA_API_URL or not OLLAMA_MODEL:
-        # print("Erreur: L'URL de l'API Ollama ou le nom du modèle n'est pas configuré dans .env.")
         return "Erreur de configuration LLM."
 
     headers = {
@@ -39,27 +36,81 @@ def generate_text(prompt: str):
     payload = {
         "model": OLLAMA_MODEL,
         "prompt": prompt,
-        "stream": False # On attend la réponse complète
+        "stream": False
     }
-    
-
-    # print(f"\n--- LLM >>>\n{prompt[:200]}...")
 
     try:
-        response = requests.post(OLLAMA_API_URL, headers=headers, data=json.dumps(payload), timeout=300) # Timeout de 5 minutes
-        response.raise_for_status() # Lève une exception pour les codes d'erreur HTTP
+        response = requests.post(OLLAMA_API_URL, headers=headers, data=json.dumps(payload), timeout=300)
+        response.raise_for_status()
         
         response_data = response.json()
-        
-        # Nettoyage de la réponse pour enlever les guillemets ou autres formatages
         clean_response = response_data.get('response', '').strip()
         
-        # print(f"SUCCES\n\n---------------------------------")
         return clean_response
 
     except requests.exceptions.RequestException as e:
-        print(f"Erreur critique lors de la requête LLM: {e}\n---------------------------------")
+        print(f"Erreur critique lors de la requête LLM: {e}")
         return f"Erreur de communication avec le LLM: {e}"
     except json.JSONDecodeError:
-        print(f"Erreur: Impossible de décoder la réponse JSON du LLM. Réponse brute: {response.text}\n---------------------------------")
+        print(f"Erreur: Impossible de décoder la réponse JSON du LLM. Réponse brute: {response.text}")
         return "Erreur de format de réponse du LLM."
+
+def generate_json(prompt: str, max_retries: int = 3, delay: float = 1.0):
+    """
+    Génère du JSON valide via LLM avec retry automatique.
+    
+    Args:
+        prompt: Le prompt à envoyer au LLM
+        max_retries: Nombre maximum de tentatives (défaut: 3)
+        delay: Délai entre les tentatives en secondes (défaut: 1.0)
+    
+    Returns:
+        Dict contenant les données JSON parsées
+        
+    Raises:
+        LLMError: Si impossible de générer du JSON valide après max_retries
+    """
+    
+    for attempt in range(max_retries):
+        try:
+            if attempt + 1 >1 :
+                print(f"Génération LLM - tentative {attempt + 1}/{max_retries}")
+            
+            # Appel LLM
+            response = generate_text(prompt)
+            
+            if not response or "Erreur" in response:
+                raise Exception(f"Erreur LLM: {response}")
+            
+            # Nettoyage et parsing JSON
+            clean_response = strip_markdown_fences(response)
+            data = json.loads(clean_response)
+            
+            # Validation basique du JSON
+            if not isinstance(data, dict):
+                raise json.JSONDecodeError("Réponse n'est pas un objet JSON", clean_response, 0)
+            
+            if attempt+1>1 :
+                print(f"✓ JSON valide généré à la tentative {attempt + 1}")
+            return data
+            
+        except json.JSONDecodeError as e:
+            print(f"✗ Erreur parsing JSON (tentative {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Réponse problématique: {clean_response[:200]}...")
+                print(f"Nouvelle tentative dans {delay}s...")
+                time.sleep(delay)
+            else:
+                print(f"Échec définitif après {max_retries} tentatives")
+                print(f"Dernière réponse: {clean_response}")
+                raise LLMError(f"Impossible de générer du JSON valide après {max_retries} tentatives")
+                
+        except Exception as e:
+            print(f"✗ Erreur LLM (tentative {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Nouvelle tentative dans {delay}s...")
+                time.sleep(delay)
+            else:
+                print(f"Échec définitif après {max_retries} tentatives")
+                raise LLMError(f"Erreur LLM après {max_retries} tentatives: {e}")
+

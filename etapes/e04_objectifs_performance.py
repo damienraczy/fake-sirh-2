@@ -1,11 +1,9 @@
 # =============================================================================
-# etapes/e04_objectifs_performance.py
+# etapes/e04_objectifs_performance.py (version complète)
 # =============================================================================
 
-import json
 from database import get_connection
-from llm_client import generate_text
-from utils_llm import strip_markdown_fences
+from llm_client import generate_json, LLMError
 from config import get_config
 from datetime import datetime
 
@@ -34,6 +32,10 @@ def run():
     """)
     employees = cursor.fetchall()
     
+    if not employees:
+        print("Aucun employé trouvé. Assurez-vous d'avoir exécuté l'étape 2.")
+        return
+    
     # Lire les prompts
     with open('prompts/04_goals_generation.txt', 'r', encoding='utf-8') as f:
         goals_prompt_template = f.read()
@@ -43,11 +45,16 @@ def run():
     
     print("Génération des objectifs et évaluations...")
     
+    goals_created = 0
+    reviews_created = 0
+    
     for employee in employees:
-        if employee['manager_id']:  # Skip DG pour les objectifs assignés
-            # Générer les objectifs
+        employee_name = f"{employee['first_name']} {employee['last_name']}"
+        
+        # Générer les objectifs (sauf pour le DG qui n'a pas de manager pour lui assigner)
+        if employee['manager_id']:
             goals_prompt = goals_prompt_template.format(
-                employee_name=f"{employee['first_name']} {employee['last_name']}",
+                employee_name=employee_name,
                 position=employee['position_title'] or "Employee",
                 unit=employee['unit_name'] or "Unknown",
                 year=current_year,
@@ -55,49 +62,53 @@ def run():
                 culture=company_profile['culture']
             )
             
-            response = generate_text(goals_prompt)
-            clean_response = strip_markdown_fences(response)
-            
             try:
-                goals_data = json.loads(clean_response)
+                goals_data = generate_json(goals_prompt)
                 
-                for goal in goals_data['goals']:
-                    cursor.execute("""
-                        INSERT INTO goal (assignee_id, assigner_id, description, evaluation_year, status)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (employee['id'], employee['manager_id'], 
-                          goal['description'], current_year, goal['status']))
+                if 'goals' in goals_data:
+                    for goal in goals_data['goals']:
+                        if 'description' in goal and 'status' in goal:
+                            cursor.execute("""
+                                INSERT INTO goal (assignee_id, assigner_id, description, evaluation_year, status)
+                                VALUES (?, ?, ?, ?, ?)
+                            """, (employee['id'], employee['manager_id'], 
+                                  goal['description'], current_year, goal['status']))
+                            goals_created += 1
                 
-            except json.JSONDecodeError:
-                print(f"Erreur parsing objectifs pour {employee['first_name']} {employee['last_name']}")
+                print(f"✓ Objectifs générés pour {employee_name}")
+                
+            except LLMError:
+                print(f"⚠ Échec objectifs pour {employee_name}")
         
         # Générer l'évaluation de performance
         review_prompt = review_prompt_template.format(
-            employee_name=f"{employee['first_name']} {employee['last_name']}",
+            employee_name=employee_name,
             position=employee['position_title'] or "Employee",
             unit=employee['unit_name'] or "Unknown",
             year=current_year,
             culture=company_profile['culture']
         )
         
-        response = generate_text(review_prompt)
-        clean_response = strip_markdown_fences(response)
-        
         try:
-            review_data = json.loads(clean_response)
+            review_data = generate_json(review_prompt)
             
-            reviewer_id = employee['manager_id'] or 1  # DG s'auto-évalue
+            if 'score' in review_data and 'comments' in review_data:
+                reviewer_id = employee['manager_id'] or 1  # DG s'auto-évalue ou évalué par ID 1
+                
+                cursor.execute("""
+                    INSERT INTO performance_review (employee_id, reviewer_id, evaluation_year, score, comments)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (employee['id'], reviewer_id, current_year, 
+                      review_data['score'], review_data['comments']))
+                reviews_created += 1
+                
+                print(f"✓ Évaluation générée pour {employee_name}")
             
-            cursor.execute("""
-                INSERT INTO performance_review (employee_id, reviewer_id, evaluation_year, score, comments)
-                VALUES (?, ?, ?, ?, ?)
-            """, (employee['id'], reviewer_id, current_year, 
-                  review_data['score'], review_data['comments']))
-            
-        except json.JSONDecodeError:
-            print(f"Erreur parsing évaluation pour {employee['first_name']} {employee['last_name']}")
+        except LLMError:
+            print(f"⚠ Échec évaluation pour {employee_name}")
     
     conn.commit()
     conn.close()
     
-    print("✓ Objectifs et évaluations de performance générés")
+    print(f"✓ {goals_created} objectifs créés")
+    print(f"✓ {reviews_created} évaluations de performance créées")
