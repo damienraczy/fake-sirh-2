@@ -42,7 +42,7 @@ class RAGConfig:
     def from_base_config(cls, base_config: Dict[str, Any]) -> 'RAGConfig':
         """Crée une config RAG à partir de la config de base"""
         
-        entreprise = base_config['entreprise']
+        entreprise = base_config.get('entreprise',{})
         rag_config = base_config.get('rag', {})
         
         return cls(

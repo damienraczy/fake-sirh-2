@@ -11,7 +11,7 @@ import subprocess
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from config import load_config
+from config import load_config, get_config
 from src import e00_initialisation as etape0
 from src import e01_structure_organisationnelle as etape1
 from src import e02_population_hierarchie as etape2
@@ -49,7 +49,8 @@ def launch_rag_api(port=8000):
 
 def main():
     ap = argparse.ArgumentParser(description="Générateur SIRH + RAG")
-    ap.add_argument("steps", nargs='*', help="Étapes (0-7)", default=['0','1','2','3','4','5','6'])
+    # ap.add_argument("steps", nargs='*', help="Étapes (0-7)", default=['0','1','2','3','4','5','6'])
+    ap.add_argument("steps", nargs='*', help="Étapes (0-7)")
     ap.add_argument("--yaml", default="config.yaml", help="Config YAML")
     ap.add_argument("--sql", default="schema.sql", help="Schéma SQL") 
     ap.add_argument("--raz", action="store_true", help="Reset base")
@@ -69,7 +70,7 @@ def main():
     load_config(config_path=args.yaml)
 
     steps = {
-        '0': lambda: etape0.run(schema_path=args.sql),
+        '0': lambda: etape0.run(schema_path=args.sql, ),
         '1': etape1.run, '2': etape2.run, '3': etape3.run,
         '4': etape4.run, '5': etape5.run, '6': etape6.run,
         '7': run_rag_indexation

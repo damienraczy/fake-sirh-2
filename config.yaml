@@ -1,64 +1,55 @@
-# config.yaml (version étendue)
-# =============================================================================
-
 entreprise:
-  nom: "Flow Solutions"
-  secteur: "Green Energy post AI"
-  taille: 150
-  culture: "Innovation-driven, remote-friendly"
-  etape_croissance: "Scale-up"
+  nom: "Experts Bois"
+  secteur: "Menuiserie - Fabrication et pose"
+  taille: 15
+  culture: "Savoir-faire artisanal, esprit d’équipe"
+  etape_croissance: "PME stable"
   defis:
-    - "Shortage of local skilled labor"
-    - "High cost of training"
-    - "Remote team management"
+    - "Recrutement d’ouvriers qualifiés"
+    - "Maintien des normes de sécurité"
+    - "Gestion des délais de livraison"
   
   structure_organisationnelle:
     departements:
-      - "R&D"
-      - "Wind Power"
-      - "Solar Power"
-      - "Electrical"
-      - "Community Relations"
-      - "HR"
-      - "Finance"
-    niveaux_hierarchiques: 4
-    style_management: "Flat hierarchy"
+      - "Production atelier"
+      - "Pose / Chantier"
+      - "Support & Logistique"
+      - "Administration & Commerce"
+      - "Direction"
+    niveaux_hierarchiques: 3
+    style_management: "Hiérarchie simple et directe"
   
   contexte_rh:
-    anciennete_moyenne: "2.5 years"
-    taux_turnover: "15%"
-    budget_formation: "500000 XPF/employee/year"
-    cycle_performance: "Annual cycle with quarterly check-ins"
-    ratio_hommes: 0.60
+    anciennete_moyenne: "6 ans"
+    taux_turnover: "5%"
+    budget_formation: "120000 XPF/employé/an"
+    cycle_performance: "Évaluation annuelle avec suivi semestriel"
+    ratio_hommes: 0.80
   
   technique:
-    domaine_email: "flowsolutions.nc"
+    domaine_email: "expertsbois.nc"
   
   base_de_données:
     chemin: "db"
-    nom: "fake_sirh.sqlite"
+    nom: "experts_bois.sqlite"
 
-# 🆕 CONFIGURATION RAG
 rag:
-  # Configuration technique
   embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   vector_store_path: "data/vector_store"
   chunk_size: 1000
   chunk_overlap: 200
   top_k_docs: 5
   
-  # Configuration LLM (hérite de la config existante)
   temperature: 0.1
   max_tokens: 1000
   
-  # Configuration interface
   interface:
-    title: "🏢 SIRH RAG - Flow Solutions"
+    title: "🏢 SIRH RAG - Experts Bois"
     subtitle: "Assistant RH Intelligent"
     port: 8501
     examples:
-      - "Combien d'employés travaillent en R&D ?"
-      - "Qui sont les meilleurs performeurs cette année ?"
-      - "Quelles sont les compétences les plus demandées ?"
-      - "Résumé des formations en leadership"
-      - "Analyse du feedback des équipes"
+      - "Combien d’employés travaillent en Production ?"
+      - "Quel est le budget formation annuel par employé ?"
+      - "Quels sont les défis RH principaux ?"
+      - "Répartition des effectifs par département"
+      - "Résumé des formations sécurité en atelier"

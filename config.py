@@ -3,14 +3,15 @@ import yaml
 
 CONFIG = None
 
-def load_config(config_path='gen_data.yaml'):
+def load_config(config_path: str):
     """
     Charge la configuration depuis le fichier YAML et la stocke dans une variable globale.
     """
     global CONFIG
     print("Chargement de la configuration...")
-    if CONFIG is None:
-        print("Première fois, lecture du fichier de configuration.")
+    # On force la relecture si un chemin est spécifié, sinon on utilise le cache
+    if CONFIG is None or config_path != 'config.yaml':
+        print(f"Lecture du fichier de configuration : {config_path}")
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 CONFIG = yaml.safe_load(f)
@@ -28,6 +29,7 @@ def get_config():
     """
     Retourne la configuration chargée. Lance le chargement si ce n'est pas déjà fait.
     """
-    if CONFIG is None:
-        return load_config()
+    global CONFIG
+    # if CONFIG is None:
+    #     return load_config(config_path)
     return CONFIG

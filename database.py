@@ -11,7 +11,7 @@ def get_db_path():
     os.makedirs(db_dir, exist_ok=True)
     return os.path.join(db_dir, db_name)
 
-def create_database(schema_path='IOD_Core_FR_schema.sql'):
+def create_database(schema_path):
     """
     Crée une base de données vide à partir du schéma SQL.
     Supprime l'ancienne base de données si elle existe.

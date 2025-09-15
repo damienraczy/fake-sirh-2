@@ -4,7 +4,7 @@
 
 from database import create_database
 
-def run(schema_path='schema.sql'):
+def run(schema_path):
     """
     Étape 0: Initialisation de la base de données
     """
