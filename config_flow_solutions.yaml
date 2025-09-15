@@ -36,7 +36,7 @@ entreprise:
   
   base_de_données:
     chemin: "db"
-    nom: "fake_sirh.sqlite"
+    nom: "flow_solutions.sqlite"
 
 # 🆕 CONFIGURATION RAG
 rag:

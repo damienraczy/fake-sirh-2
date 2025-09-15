@@ -1,0 +1,55 @@
+entreprise:
+  nom: "Experts Bois"
+  secteur: "Menuiserie - Fabrication et pose"
+  taille: 15
+  culture: "Savoir-faire artisanal, esprit d’équipe"
+  etape_croissance: "PME stable"
+  defis:
+    - "Recrutement d’ouvriers qualifiés"
+    - "Maintien des normes de sécurité"
+    - "Gestion des délais de livraison"
+  
+  structure_organisationnelle:
+    departements:
+      - "Production atelier"
+      - "Pose / Chantier"
+      - "Support & Logistique"
+      - "Administration & Commerce"
+      - "Direction"
+    niveaux_hierarchiques: 3
+    style_management: "Hiérarchie simple et directe"
+  
+  contexte_rh:
+    anciennete_moyenne: "6 ans"
+    taux_turnover: "5%"
+    budget_formation: "120000 XPF/employé/an"
+    cycle_performance: "Évaluation annuelle avec suivi semestriel"
+    ratio_hommes: 0.80
+  
+  technique:
+    domaine_email: "expertsbois.nc"
+  
+  base_de_données:
+    chemin: "db"
+    nom: "experts_bois.sqlite"
+
+rag:
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  vector_store_path: "data/vector_store"
+  chunk_size: 1000
+  chunk_overlap: 200
+  top_k_docs: 5
+  
+  temperature: 0.1
+  max_tokens: 1000
+  
+  interface:
+    title: "🏢 SIRH RAG - Experts Bois"
+    subtitle: "Assistant RH Intelligent"
+    port: 8501
+    examples:
+      - "Combien d’employés travaillent en Production ?"
+      - "Quel est le budget formation annuel par employé ?"
+      - "Quels sont les défis RH principaux ?"
+      - "Répartition des effectifs par département"
+      - "Résumé des formations sécurité en atelier"

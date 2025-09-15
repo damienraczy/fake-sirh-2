@@ -1,5 +1,5 @@
 # =============================================================================
-# etapes/e07_rag_indexation.py
+# src/e07_rag_indexation.py
 # =============================================================================
 
 from rag.document_loader import SIRHDocumentLoader

@@ -1,5 +1,5 @@
 # =============================================================================
-# etapes/e06_feedback_documents.py (version complète)
+# src/e06_feedback_documents.py (version complète)
 # =============================================================================
 
 import os

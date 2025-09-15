@@ -1,5 +1,5 @@
 # =============================================================================
-# etapes/e05_formations_developpement.py (version complète)
+# src/e05_formations_developpement.py (version complète)
 # =============================================================================
 
 from database import get_connection

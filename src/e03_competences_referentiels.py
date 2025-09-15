@@ -1,5 +1,5 @@
 # =============================================================================
-# etapes/e03_competences_referentiels.py (version complète)
+# src/e03_competences_referentiels.py (version complète)
 # =============================================================================
 
 from database import get_connection

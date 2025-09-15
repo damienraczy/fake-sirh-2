@@ -13,3 +13,27 @@ sqlalchemy
 pandas
 pydantic
 jinja2
+
+
+#
+# * **Linter - `pylint` ou `flake8`** :
+#     * **Utilité** : Ils analysent votre code statiquement pour détecter les erreurs, 
+#         les incohérences de style et les "code smells" (constructions de code qui ne sont
+#         pas des erreurs mais qui sont sous-optimales).
+#     * **Utilisation** :
+#         ```bash
+#         pip install pylint
+#         pylint votre_module.py
+#         ```
+pylint
+flake8
+
+# * **Formatter - `black`** :
+#     * **Utilité** : Il reformate automatiquement votre code pour qu'il respecte un style unique
+#          et cohérent. C'est un excellent moyen de ne plus jamais avoir à se soucier du formatage.
+#     * **Utilisation** :
+#         ```bash
+#         pip install black
+#         black .
+#         ```
+black

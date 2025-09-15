@@ -1,5 +1,5 @@
 # =============================================================================
-# etapes/e04_objectifs_performance.py (version complète)
+# src/e04_objectifs_performance.py (version complète)
 # =============================================================================
 
 from database import get_connection

@@ -1,5 +1,5 @@
 # =============================================================================
-# etapes/e02_population_hierarchie.py (version complète)
+# src/e02_population_hierarchie.py (version complète)
 # =============================================================================
 
 from database import get_connection
