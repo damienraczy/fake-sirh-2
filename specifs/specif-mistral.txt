@@ -1,0 +1,128 @@
+specif-mistral
+
+Projet : Fake-sirh-2
+Objectif global
+Créer un simulateur de Système d'Information des Ressources Humaines (SIRH) pour modéliser le fonctionnement d'une entreprise fictive, sans interface utilisateur, mais basé uniquement sur une base de données structurée. Ce simulateur servira de socle pour tester et valider des solutions RH ou organisationnelles via un système de RAG (Retrieval-Augmented Generation).
+
+1. Architecture Technique
+
+
+Base de données :
+
+Stockage des données simulées représentant une entreprise (employés, services, processus RH, hiérarchie, etc.).
+Conçue pour être interrogeable et exploitable par des outils d'IA.
+
+
+
+Génération des données :
+
+Utilisation de scripts Python en ligne de commande (CLI) pour peupler la base de données.
+Intégration d'Ollama Turbo (modèle local d'IA générative, ollama.com) pour :
+
+Générer des données réalistes (ex : profils d'employés, historiques de carrière, évaluations, etc.).
+Simuler des scénarios organisationnels (turnover, promotions, conflits, etc.) à partir d'une description macroscopique de l'entreprise (ex : secteur d'activité, taille, culture, enjeux RH).
+
+
+
+
+
+
+2. Workflow de Création
+
+
+Description macroscopique :
+
+Définition des caractéristiques globales de l'entreprise (ex : "une PME tech de 200 employés en hypercroissance avec un turnover élevé").
+Spécification des enjeux RH à simuler (ex : gestion des talents, diversité, télétravail).
+
+
+
+Génération automatisée :
+
+Les CLI Python appellent Ollama Turbo pour :
+
+Créer des données cohérentes (ex : organigramme, fiches de poste, données de paie fictives).
+Injecter des biais ou des problèmes (ex : inégalités salariales, déséquilibres entre services).
+
+
+
+
+
+Stockage :
+
+Les données générées sont enregistrées dans la base de données, structurées pour une exploitation ultérieure.
+
+
+
+
+3. Utilisation du RAG
+
+
+Cas d'usage :
+
+Permettre à des entreprises réelles ou à des consultants RH d'interroger le simulateur via des requêtes en langage naturel (ex : "Comment réduire le turnover dans un contexte de croissance rapide ?").
+Le RAG utilise la base de données pour :
+
+Retriever : Extraire les données pertinentes (ex : historiques de départs, feedbacks d'employés).
+Augmenter : Compléter avec des analyses ou des recommandations générées par l'IA.
+Générer : Proposer des solutions ou des scénarios d'action.
+
+
+
+
+
+Avantages :
+
+Test de stratégies RH sans risque sur des données réelles.
+Formation de modèles d'IA spécialisés en gestion des ressources humaines.
+
+
+
+
+4. Technologie Clé : Ollama Turbo
+
+
+Pourquoi Ollama ? :
+
+Modèle local (respect de la confidentialité, pas de dépendance à des API externes).
+Optimisé pour la génération de texte structuré (JSON, CSV, etc.), idéal pour peupler une base de données.
+Permet une personnalisation fine des scénarios (ex : ajuster le réalisme des données).
+
+
+
+Intégration :
+
+Les CLI Python envoient des prompts détaillés à Ollama pour guider la génération (ex : "Génère 50 profils d'ingénieurs avec 20% de turnover annuel, incluant des motifs de départ variés").
+
+
+
+
+5. Livrables Attendus
+
+
+Base de données :
+
+Schéma relationnel documenté (tables : Employés, Services, Évaluations, etc.).
+Données générées et validées (ex : cohérence des dates, hiérarchies).
+
+
+
+Scripts Python :
+
+CLI pour la génération et la mise à jour des données.
+Documentation des prompts utilisés avec Ollama.
+
+
+
+Démonstration RAG :
+
+Exemples de requêtes/réponses pour illustrer l'utilité du simulateur.
+
+
+
+
+6. Prochaines Étapes (À Affiner)
+
+Définir le schéma de la base de données (quelles tables ? quels champs ?).
+Rédiger des prompts types pour Ollama Turbo (ex : génération de profils, de feedbacks).
+Développer les premiers scripts Python pour l'automatisation.

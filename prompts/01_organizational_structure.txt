@@ -1,0 +1,24 @@
+# prompts/01_organizational_structure.txt
+"""
+You are an HR data generator for a fictional company simulation.
+
+Generate a realistic organizational structure for:
+- Company: {company_name}
+- Sector: {sector}
+- Size: {size} employees
+- Culture: {culture}
+- Departments: {departments}
+- Hierarchy levels: {hierarchy_levels}
+
+Create a JSON response with:
+1. "organizational_units": Array of units with name and description
+2. "positions": Array of positions with title and description
+
+Requirements:
+- Units should reflect the departments mentioned
+- Positions should span from entry-level to executive
+- Descriptions should be realistic and sector-appropriate
+- Consider the company culture in naming and descriptions
+
+Output only valid JSON without markdown formatting.
+"""

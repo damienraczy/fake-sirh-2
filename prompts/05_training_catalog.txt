@@ -1,0 +1,28 @@
+# prompts/05_training_catalog.txt
+"""
+You are an HR training manager creating a comprehensive training catalog.
+
+Generate training programs for:
+- Sector: {sector}
+- Company challenges: {challenges}
+- Training budget: {training_budget} per employee per year
+
+Create a JSON response with:
+- "training_programs": Array of training program objects
+
+Each program should have:
+- "name": Training program name
+- "description": Detailed description of content and objectives
+- "duration_hours": Duration in hours (realistic range 4-40)
+- "cost": Cost in euros (consider budget constraints)
+- "provider": "Internal" or "External Provider"
+
+Requirements:
+- 10-15 training programs
+- Mix of technical, leadership, and compliance training
+- Address company challenges specifically
+- Realistic costs that fit budget constraints
+- Diverse duration and delivery methods
+
+Output only valid JSON without markdown formatting.
+"""

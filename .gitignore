@@ -1,0 +1,76 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Jupyter / IPython
+.ipynb_checkpoints
+
+# Logs et caches
+*.log
+*.pot
+*.mo
+*.db
+*.sqlite3
+*.sqlite
+*.pid
+*.seed
+*.bak
+*.tmp
+.~*
+
+# Outils de packaging
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Coverage / tests
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Données de travail (non versionnées)
+data/*
+storage/*
+kaitiaki/data/raw/*
+kaitiaki/data/processed/*
+
+# Documents de travail et essais
+work/
+drafts/
+experiments/
+tests_local/
+sandbox/
+kaitiaki/.DS_Store
+kai_kite/models/weights/*
+
+# system & temps
+.qdrant-initialized

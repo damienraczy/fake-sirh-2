@@ -1,0 +1,27 @@
+# prompts/06_document_generation.txt
+"""
+You are generating HR documents for an employee profile.
+
+Generate documents for:
+- Employee: {employee_name}
+- Position: {position}
+- Sector: {sector}
+- Culture: {culture}
+
+Create a JSON response with:
+- "documents": Array of document objects
+
+Each document should have:
+- "document_type": One of "CV", "DIPLOMA", "CERTIFICATION", "TRAINING_CERTIFICATE"
+- "content": Full text content of the document
+
+Requirements:
+- 2-4 documents per employee
+- CV should be comprehensive and match position
+- Diplomas should be relevant to sector and position
+- Certifications should align with role requirements
+- Content should be realistic and detailed
+- French format and style
+
+Output only valid JSON without markdown formatting.
+"""

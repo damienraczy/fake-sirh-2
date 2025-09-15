@@ -1,0 +1,19 @@
+tables-grok
+
+Pour le projet "Fake-sirh-2" utilisant SQLite pour un prototypage rapide, voici une liste des tables nécessaires pour modéliser une simulation d’entreprise avec des données RH et organisationnelles. Ces tables sont conçues pour capturer les entités principales et leurs relations de manière simple, tout en permettant une migration future vers Neo4j. La liste est présentée sans spécification formelle (pas de schémas SQL détaillés), mais avec une description des données qu’elles contiendront :
+
+Employés : Contient les informations sur chaque employé (ex. : identifiant, nom, prénom, date de naissance, email, date d’embauche, statut, salaire).
+Départements : Représente les départements ou unités organisationnelles de l’entreprise (ex. : identifiant, nom, description, localisation).
+Rôles/Postes : Décrit les postes ou rôles dans l’entreprise (ex. : identifiant, titre, description, niveau hiérarchique, compétences requises).
+Hiérarchie : Modélise les relations hiérarchiques entre employés (ex. : identifiant employé, identifiant manager, type de relation).
+Équipes : Représente les équipes ou groupes de travail (ex. : identifiant, nom, description, département associé).
+Appartenance_Équipe : Relie les employés aux équipes (ex. : identifiant employé, identifiant équipe, rôle dans l’équipe, date de début/fin).
+Projets : Décrit les projets internes (ex. : identifiant, nom, description, date de début/fin, budget, département responsable).
+Participation_Projet : Associe les employés ou équipes aux projets (ex. : identifiant employé/équipe, identifiant projet, rôle, contribution).
+Compétences : Liste les compétences disponibles dans l’entreprise (ex. : identifiant, nom, catégorie, description).
+Compétences_Employés : Relie les employés à leurs compétences (ex. : identifiant employé, identifiant compétence, niveau de maîtrise).
+Performances : Stocke les évaluations de performance des employés (ex. : identifiant, identifiant employé, date, note, commentaires).
+Absences : Enregistre les absences ou congés des employés (ex. : identifiant, identifiant employé, type d’absence, date de début/fin, motif).
+Formations : Répertorie les formations suivies ou proposées (ex. : identifiant, titre, description, date, durée).
+Formations_Employés : Associe les employés aux formations suivies (ex. : identifiant employé, identifiant formation, date, résultat).
+Processus_RH : Décrit les processus RH simulés (ex. : identifiant, type de processus, description, date, employés impliqués).

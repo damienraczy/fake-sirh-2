@@ -1,0 +1,1260 @@
+# =============================================================================
+# STRUCTURE DU PROJET FAKE-SIRH-2
+# =============================================================================
+
+# main.py (mise à jour)
+import sys
+import os
+import time
+import argparse
+from pathlib import Path
+import shutil
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+from config import load_config
+from etapes import e00_initialisation as etape0
+from etapes import e01_structure_organisationnelle as etape1
+from etapes import e02_population_hierarchie as etape2
+from etapes import e03_competences_referentiels as etape3
+from etapes import e04_objectifs_performance as etape4
+from etapes import e05_formations_developpement as etape5
+from etapes import e06_feedback_documents as etape6
+from utils.validation import validate_database
+
+def run_all_steps():
+    """
+    Fonction principale qui orchestre l'exécution de toutes les étapes de génération.
+    """
+    ap = argparse.ArgumentParser(description="Générateur SIRH de démonstration")
+    ap.add_argument("steps", nargs='*', help="Etapes à effectuer (0-6)", default=['0','1','2','3','4','5','6'])
+    ap.add_argument("--yaml", required=False, help="Chemin du YAML de configuration", default="config.yaml")
+    ap.add_argument("--sql", required=False, help="Chemin du schéma SQL SQLite", default="schema.sql")
+    ap.add_argument("--raz", action="store_true", help="Supprimer la base existante avant de créer")
+    ap.add_argument("--validate", action="store_true", help="Valider la cohérence après génération")
+    args = ap.parse_args()
+
+    if args.raz:
+        db_path = Path("db")
+        if db_path.exists():
+            print(f"[RAZ] Suppression de la base existante: {db_path}")
+            shutil.rmtree(db_path)
+        data_path = Path("data")
+        if data_path.exists() and data_path.is_dir():
+            print(f"[RAZ] Suppression du répertoire data/")
+            shutil.rmtree(data_path)
+
+    start_time = time.time()
+    print("================================================")
+    print("= Générateur de Données SIRH Fictif - v2 =")
+    print("================================================")
+
+    load_config(config_path=args.yaml)
+
+    steps = {
+        '0': etape0.run,     # initialisation de la base
+        '1': etape1.run,     # structure organisationnelle
+        '2': etape2.run,     # population et hiérarchie
+        '3': etape3.run,     # compétences et référentiels
+        '4': etape4.run,     # objectifs et performance
+        '5': etape5.run,     # formations et développement
+        '6': etape6.run      # feedback et documents
+    }
+
+    try:
+        for step_num in args.steps:
+            if step_num == '0':
+                print(f"\n================== ÉTAPE {step_num} ==================")
+                steps[step_num](schema_path=args.sql)
+            else:
+                print(f"\n================== ÉTAPE {step_num} ==================")
+                steps[step_num]()
+
+        if args.validate:
+            print("\n================== VALIDATION ==================")
+            validate_database()
+
+    except Exception as e:
+        print(f"\nERREUR FATALE: {e}")
+        import traceback
+        traceback.print_exc()
+
+    end_time = time.time()
+    print(f"\nGénération terminée en {end_time - start_time:.2f} secondes.")
+
+if __name__ == "__main__":
+    run_all_steps()
+
+# =============================================================================
+# etapes/e01_structure_organisationnelle.py
+# =============================================================================
+
+import json
+from database import get_connection
+from llm_client import generate_text
+from utils_llm import strip_markdown_fences
+from config import get_config
+
+def run():
+    """
+    Étape 1: Génération de la structure organisationnelle
+    Tables: organizational_unit, position
+    """
+    print("Étape 1: Génération de la structure organisationnelle")
+    
+    config = get_config()
+    company_profile = config['entreprise']
+    
+    # Lire le prompt pour la structure organisationnelle
+    with open('prompts/01_organizational_structure.txt', 'r', encoding='utf-8') as f:
+        prompt_template = f.read()
+    
+    # Substituer les variables dans le prompt
+    prompt = prompt_template.format(
+        company_name=company_profile['nom'],
+        sector=company_profile['secteur'],
+        size=company_profile['taille'],
+        culture=company_profile['culture'],
+        departments=', '.join(company_profile['structure_organisationnelle']['departements']),
+        hierarchy_levels=company_profile['structure_organisationnelle']['niveaux_hierarchiques']
+    )
+    
+    # Générer les données via LLM
+    print("Génération de la structure organisationnelle via LLM...")
+    response = generate_text(prompt)
+    clean_response = strip_markdown_fences(response)
+    
+    try:
+        data = json.loads(clean_response)
+        
+        # Insérer en base de données
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Insérer les unités organisationnelles
+        print("Insertion des unités organisationnelles...")
+        for unit in data['organizational_units']:
+            cursor.execute("""
+                INSERT INTO organizational_unit (name, description)
+                VALUES (?, ?)
+            """, (unit['name'], unit['description']))
+        
+        # Insérer les positions
+        print("Insertion des positions...")
+        for position in data['positions']:
+            cursor.execute("""
+                INSERT INTO position (title, description)
+                VALUES (?, ?)
+            """, (position['title'], position['description']))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"✓ {len(data['organizational_units'])} unités organisationnelles créées")
+        print(f"✓ {len(data['positions'])} positions créées")
+        
+    except json.JSONDecodeError as e:
+        print(f"Erreur de parsing JSON: {e}")
+        print(f"Réponse LLM: {clean_response[:500]}...")
+    except Exception as e:
+        print(f"Erreur lors de l'insertion: {e}")
+
+# =============================================================================
+# etapes/e02_population_hierarchie.py
+# =============================================================================
+
+import json
+from database import get_connection
+from llm_client import generate_text
+from utils_llm import strip_markdown_fences
+from config import get_config
+from datetime import datetime, timedelta
+import random
+
+def run():
+    """
+    Étape 2: Génération de la population et hiérarchie
+    Tables: employee, assignment
+    """
+    print("Étape 2: Génération de la population et hiérarchie")
+    
+    config = get_config()
+    company_profile = config['entreprise']
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Récupérer les unités et positions existantes
+    cursor.execute("SELECT id, name FROM organizational_unit")
+    units = cursor.fetchall()
+    
+    cursor.execute("SELECT id, title FROM position")
+    positions = cursor.fetchall()
+    
+    # Lire le prompt pour la génération d'employés
+    with open('prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
+        prompt_template = f.read()
+    
+    # Générer le directeur général d'abord
+    print("Génération du directeur général...")
+    dg_prompt = prompt_template.format(
+        position="Chief Executive Officer",
+        unit="Direction Générale",
+        sector=company_profile['secteur'],
+        culture=company_profile['culture'],
+        avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
+        count=1
+    )
+    
+    response = generate_text(dg_prompt)
+    clean_response = strip_markdown_fences(response)
+    
+    try:
+        dg_data = json.loads(clean_response)
+        employee = dg_data['employees'][0]
+        
+        # Insérer le DG (manager_id = NULL)
+        cursor.execute("""
+            INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
+            VALUES (?, ?, ?, ?, NULL)
+        """, (employee['first_name'], employee['last_name'], 
+              employee['email'], employee['hire_date']))
+        
+        dg_id = cursor.lastrowid
+        print(f"✓ DG créé: {employee['first_name']} {employee['last_name']}")
+        
+        # Générer les managers de département
+        managers = {}
+        for unit in units:
+            if unit['name'] != "Direction Générale":
+                manager_prompt = prompt_template.format(
+                    position="Department Manager",
+                    unit=unit['name'],
+                    sector=company_profile['secteur'],
+                    culture=company_profile['culture'],
+                    avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
+                    count=1
+                )
+                
+                response = generate_text(manager_prompt)
+                clean_response = strip_markdown_fences(response)
+                manager_data = json.loads(clean_response)
+                employee = manager_data['employees'][0]
+                
+                cursor.execute("""
+                    INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (employee['first_name'], employee['last_name'], 
+                      employee['email'], employee['hire_date'], dg_id))
+                
+                manager_id = cursor.lastrowid
+                managers[unit['id']] = manager_id
+                
+                print(f"✓ Manager {unit['name']}: {employee['first_name']} {employee['last_name']}")
+        
+        # Générer les employés restants
+        remaining_employees = company_profile['taille'] - len(managers) - 1
+        employees_per_unit = remaining_employees // len(units)
+        
+        for unit in units:
+            if unit['name'] != "Direction Générale":
+                unit_positions = [p for p in positions if "Manager" not in p['title'] and "Director" not in p['title']]
+                
+                for _ in range(employees_per_unit):
+                    pos = random.choice(unit_positions)
+                    manager_id = managers.get(unit['id'], dg_id)
+                    
+                    emp_prompt = prompt_template.format(
+                        position=pos['title'],
+                        unit=unit['name'],
+                        sector=company_profile['secteur'],
+                        culture=company_profile['culture'],
+                        avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
+                        count=1
+                    )
+                    
+                    response = generate_text(emp_prompt)
+                    clean_response = strip_markdown_fences(response)
+                    emp_data = json.loads(clean_response)
+                    employee = emp_data['employees'][0]
+                    
+                    cursor.execute("""
+                        INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (employee['first_name'], employee['last_name'], 
+                          employee['email'], employee['hire_date'], manager_id))
+                    
+                    emp_id = cursor.lastrowid
+                    
+                    # Créer l'affectation
+                    cursor.execute("""
+                        INSERT INTO assignment (employee_id, position_id, unit_id, start_date, end_date)
+                        VALUES (?, ?, ?, ?, NULL)
+                    """, (emp_id, pos['id'], unit['id'], employee['hire_date']))
+        
+        conn.commit()
+        conn.close()
+        
+        # Compter les employés créés
+        conn2 = get_connection()
+        cursor2 = conn2.cursor()
+        cursor2.execute("SELECT COUNT(*) FROM employee")
+        employee_count = cursor2.fetchone()[0]
+        conn2.close()
+        
+        print(f"✓ {employee_count} employés créés au total")
+        
+    except Exception as e:
+        print(f"Erreur lors de la génération: {e}")
+        conn.rollback()
+        conn.close()
+
+# =============================================================================
+# etapes/e03_competences_referentiels.py
+# =============================================================================
+
+import json
+from database import get_connection
+from llm_client import generate_text
+from utils_llm import strip_markdown_fences
+from config import get_config
+
+def run():
+    """
+    Étape 3: Génération des compétences et référentiels
+    Tables: skill, employee_skill
+    """
+    print("Étape 3: Génération des compétences et référentiels")
+    
+    config = get_config()
+    company_profile = config['entreprise']
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Lire le prompt pour les compétences
+    with open('prompts/03_skills_generation.txt', 'r', encoding='utf-8') as f:
+        prompt_template = f.read()
+    
+    prompt = prompt_template.format(
+        sector=company_profile['secteur'],
+        challenges=', '.join(company_profile['defis'])
+    )
+    
+    print("Génération du référentiel de compétences...")
+    response = generate_text(prompt)
+    clean_response = strip_markdown_fences(response)
+    
+    try:
+        skills_data = json.loads(clean_response)
+        
+        # Insérer les compétences
+        skill_ids = {}
+        for skill in skills_data['skills']:
+            cursor.execute("""
+                INSERT INTO skill (name, category)
+                VALUES (?, ?)
+            """, (skill['name'], skill['category']))
+            skill_ids[skill['name']] = cursor.lastrowid
+        
+        print(f"✓ {len(skills_data['skills'])} compétences créées")
+        
+        # Récupérer tous les employés avec leurs postes
+        cursor.execute("""
+            SELECT e.id, e.first_name, e.last_name, p.title as position_title
+            FROM employee e
+            LEFT JOIN assignment a ON e.id = a.employee_id AND a.end_date IS NULL
+            LEFT JOIN position p ON a.position_id = p.id
+        """)
+        employees = cursor.fetchall()
+        
+        # Générer les compétences pour chaque employé
+        print("Attribution des compétences aux employés...")
+        
+        with open('prompts/03_employee_skills_assignment.txt', 'r', encoding='utf-8') as f:
+            assignment_prompt_template = f.read()
+        
+        for employee in employees:
+            assignment_prompt = assignment_prompt_template.format(
+                employee_name=f"{employee['first_name']} {employee['last_name']}",
+                position=employee['position_title'] or "Employee",
+                available_skills=', '.join([s['name'] for s in skills_data['skills']]),
+                sector=company_profile['secteur']
+            )
+            
+            response = generate_text(assignment_prompt)
+            clean_response = strip_markdown_fences(response)
+            
+            try:
+                employee_skills = json.loads(clean_response)
+                
+                for skill_assignment in employee_skills['skills']:
+                    skill_name = skill_assignment['skill']
+                    level = skill_assignment['level']
+                    
+                    if skill_name in skill_ids:
+                        cursor.execute("""
+                            INSERT INTO employee_skill (employee_id, skill_id, level)
+                            VALUES (?, ?, ?)
+                        """, (employee['id'], skill_ids[skill_name], level))
+                        
+            except json.JSONDecodeError:
+                print(f"Erreur parsing compétences pour {employee['first_name']} {employee['last_name']}")
+                continue
+        
+        conn.commit()
+        conn.close()
+        
+        print("✓ Compétences attribuées aux employés")
+        
+    except Exception as e:
+        print(f"Erreur lors de la génération des compétences: {e}")
+
+# =============================================================================
+# etapes/e04_objectifs_performance.py
+# =============================================================================
+
+import json
+from database import get_connection
+from llm_client import generate_text
+from utils_llm import strip_markdown_fences
+from config import get_config
+from datetime import datetime
+
+def run():
+    """
+    Étape 4: Génération des objectifs et évaluations de performance
+    Tables: goal, performance_review
+    """
+    print("Étape 4: Génération des objectifs et évaluations de performance")
+    
+    config = get_config()
+    company_profile = config['entreprise']
+    current_year = datetime.now().year
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Récupérer tous les employés avec leurs managers et postes
+    cursor.execute("""
+        SELECT e.id, e.first_name, e.last_name, e.manager_id,
+               p.title as position_title, ou.name as unit_name
+        FROM employee e
+        LEFT JOIN assignment a ON e.id = a.employee_id AND a.end_date IS NULL
+        LEFT JOIN position p ON a.position_id = p.id
+        LEFT JOIN organizational_unit ou ON a.unit_id = ou.id
+    """)
+    employees = cursor.fetchall()
+    
+    # Lire les prompts
+    with open('prompts/04_goals_generation.txt', 'r', encoding='utf-8') as f:
+        goals_prompt_template = f.read()
+    
+    with open('prompts/04_performance_review.txt', 'r', encoding='utf-8') as f:
+        review_prompt_template = f.read()
+    
+    print("Génération des objectifs et évaluations...")
+    
+    for employee in employees:
+        if employee['manager_id']:  # Skip DG pour les objectifs assignés
+            # Générer les objectifs
+            goals_prompt = goals_prompt_template.format(
+                employee_name=f"{employee['first_name']} {employee['last_name']}",
+                position=employee['position_title'] or "Employee",
+                unit=employee['unit_name'] or "Unknown",
+                year=current_year,
+                challenges=', '.join(company_profile['defis']),
+                culture=company_profile['culture']
+            )
+            
+            response = generate_text(goals_prompt)
+            clean_response = strip_markdown_fences(response)
+            
+            try:
+                goals_data = json.loads(clean_response)
+                
+                for goal in goals_data['goals']:
+                    cursor.execute("""
+                        INSERT INTO goal (assignee_id, assigner_id, description, evaluation_year, status)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (employee['id'], employee['manager_id'], 
+                          goal['description'], current_year, goal['status']))
+                
+            except json.JSONDecodeError:
+                print(f"Erreur parsing objectifs pour {employee['first_name']} {employee['last_name']}")
+        
+        # Générer l'évaluation de performance
+        review_prompt = review_prompt_template.format(
+            employee_name=f"{employee['first_name']} {employee['last_name']}",
+            position=employee['position_title'] or "Employee",
+            unit=employee['unit_name'] or "Unknown",
+            year=current_year,
+            culture=company_profile['culture']
+        )
+        
+        response = generate_text(review_prompt)
+        clean_response = strip_markdown_fences(response)
+        
+        try:
+            review_data = json.loads(clean_response)
+            
+            reviewer_id = employee['manager_id'] or 1  # DG s'auto-évalue
+            
+            cursor.execute("""
+                INSERT INTO performance_review (employee_id, reviewer_id, evaluation_year, score, comments)
+                VALUES (?, ?, ?, ?, ?)
+            """, (employee['id'], reviewer_id, current_year, 
+                  review_data['score'], review_data['comments']))
+            
+        except json.JSONDecodeError:
+            print(f"Erreur parsing évaluation pour {employee['first_name']} {employee['last_name']}")
+    
+    conn.commit()
+    conn.close()
+    
+    print("✓ Objectifs et évaluations de performance générés")
+
+# =============================================================================
+# etapes/e05_formations_developpement.py
+# =============================================================================
+
+import json
+from database import get_connection
+from llm_client import generate_text
+from utils_llm import strip_markdown_fences
+from config import get_config
+import random
+from datetime import datetime, timedelta
+
+def run():
+    """
+    Étape 5: Génération des formations et développement
+    Tables: training_program, training_record
+    """
+    print("Étape 5: Génération des formations et développement")
+    
+    config = get_config()
+    company_profile = config['entreprise']
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Lire le prompt pour le catalogue de formations
+    with open('prompts/05_training_catalog.txt', 'r', encoding='utf-8') as f:
+        catalog_prompt_template = f.read()
+    
+    catalog_prompt = catalog_prompt_template.format(
+        sector=company_profile['secteur'],
+        challenges=', '.join(company_profile['defis']),
+        training_budget=company_profile['contexte_rh']['budget_formation']
+    )
+    
+    print("Génération du catalogue de formations...")
+    response = generate_text(catalog_prompt)
+    clean_response = strip_markdown_fences(response)
+    
+    try:
+        catalog_data = json.loads(clean_response)
+        
+        # Insérer les programmes de formation
+        training_ids = {}
+        for training in catalog_data['training_programs']:
+            cursor.execute("""
+                INSERT INTO training_program (name, description, duration_hours, cost, provider)
+                VALUES (?, ?, ?, ?, ?)
+            """, (training['name'], training['description'], 
+                  training['duration_hours'], training['cost'], training['provider']))
+            training_ids[training['name']] = cursor.lastrowid
+        
+        print(f"✓ {len(catalog_data['training_programs'])} programmes de formation créés")
+        
+        # Récupérer tous les employés
+        cursor.execute("SELECT id, first_name, last_name FROM employee")
+        employees = cursor.fetchall()
+        
+        # Lire le prompt pour l'attribution des formations
+        with open('prompts/05_training_assignment.txt', 'r', encoding='utf-8') as f:
+            assignment_prompt_template = f.read()
+        
+        print("Attribution des formations aux employés...")
+        
+        for employee in employees:
+            assignment_prompt = assignment_prompt_template.format(
+                employee_name=f"{employee['first_name']} {employee['last_name']}",
+                available_trainings=', '.join([t['name'] for t in catalog_data['training_programs']]),
+                budget_per_employee=company_profile['contexte_rh']['budget_formation'],
+                sector=company_profile['secteur']
+            )
+            
+            response = generate_text(assignment_prompt)
+            clean_response = strip_markdown_fences(response)
+            
+            try:
+                assignment_data = json.loads(clean_response)
+                
+                for training_record in assignment_data['training_records']:
+                    training_name = training_record['training_name']
+                    
+                    if training_name in training_ids:
+                        # Générer une date de completion dans les 6 derniers mois
+                        completion_date = datetime.now() - timedelta(days=random.randint(1, 180))
+                        
+                        cursor.execute("""
+                            INSERT INTO training_record (employee_id, training_program_id, completion_date, 
+                                                       score, satisfaction_rating, comments)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (employee['id'], training_ids[training_name], 
+                              completion_date.strftime('%Y-%m-%d'),
+                              training_record.get('score'),
+                              training_record['satisfaction_rating'],
+                              training_record['comments']))
+                
+            except json.JSONDecodeError:
+                print(f"Erreur parsing formations pour {employee['first_name']} {employee['last_name']}")
+                continue
+        
+        conn.commit()
+        conn.close()
+        
+        print("✓ Formations attribuées aux employés")
+        
+    except Exception as e:
+        print(f"Erreur lors de la génération des formations: {e}")
+
+# =============================================================================
+# etapes/e06_feedback_documents.py
+# =============================================================================
+
+import json
+import os
+from database import get_connection
+from llm_client import generate_text
+from utils_llm import strip_markdown_fences
+from config import get_config
+from datetime import datetime, timedelta
+import random
+
+def run():
+    """
+    Étape 6: Génération des feedback et documents
+    Tables: feedback, document
+    """
+    print("Étape 6: Génération des feedback et documents")
+    
+    config = get_config()
+    company_profile = config['entreprise']
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Créer le répertoire pour les documents
+    os.makedirs('data/documents', exist_ok=True)
+    
+    # Récupérer tous les employés avec leurs informations
+    cursor.execute("""
+        SELECT e.id, e.first_name, e.last_name, p.title as position_title,
+               ou.name as unit_name
+        FROM employee e
+        LEFT JOIN assignment a ON e.id = a.employee_id AND a.end_date IS NULL
+        LEFT JOIN position p ON a.position_id = p.id
+        LEFT JOIN organizational_unit ou ON a.unit_id = ou.id
+    """)
+    employees = cursor.fetchall()
+    
+    # Lire les prompts
+    with open('prompts/06_feedback_generation.txt', 'r', encoding='utf-8') as f:
+        feedback_prompt_template = f.read()
+    
+    with open('prompts/06_document_generation.txt', 'r', encoding='utf-8') as f:
+        document_prompt_template = f.read()
+    
+    print("Génération des feedback et documents...")
+    
+    for employee in employees:
+        employee_name = f"{employee['first_name']} {employee['last_name']}"
+        
+        # Générer les feedback
+        feedback_prompt = feedback_prompt_template.format(
+            employee_name=employee_name,
+            position=employee['position_title'] or "Employee",
+            unit=employee['unit_name'] or "Unknown",
+            culture=company_profile['culture'],
+            sector=company_profile['secteur']
+        )
+        
+        response = generate_text(feedback_prompt)
+        clean_response = strip_markdown_fences(response)
+        
+        try:
+            feedback_data = json.loads(clean_response)
+            
+            for feedback in feedback_data['feedback_entries']:
+                # Générer une date de feedback dans les 3 derniers mois
+                feedback_date = datetime.now() - timedelta(days=random.randint(1, 90))
+                
+                cursor.execute("""
+                    INSERT INTO feedback (from_employee_id, to_employee_id, feedback_type, 
+                                        content, feedback_date, context, is_anonymous)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (feedback.get('from_employee_id', employee['id']),
+                      employee['id'],
+                      feedback['feedback_type'],
+                      feedback['content'],
+                      feedback_date.strftime('%Y-%m-%d'),
+                      feedback['context'],
+                      feedback.get('is_anonymous', False)))
+            
+        except json.JSONDecodeError:
+            print(f"Erreur parsing feedback pour {employee_name}")
+        
+        # Générer les documents
+        document_prompt = document_prompt_template.format(
+            employee_name=employee_name,
+            position=employee['position_title'] or "Employee",
+            sector=company_profile['secteur'],
+            culture=company_profile['culture']
+        )
+        
+        response = generate_text(document_prompt)
+        clean_response = strip_markdown_fences(response)
+        
+        try:
+            document_data = json.loads(clean_response)
+            
+            for doc in document_data['documents']:
+                # Créer le fichier document
+                filename = f"emp_{employee['id']}_{doc['document_type'].lower()}.txt"
+                filepath = f"data/documents/{filename}"
+                
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(doc['content'])
+                
+                # Enregistrer en base
+                cursor.execute("""
+                    INSERT INTO document (employee_id, document_type, uri, creation_date)
+                    VALUES (?, ?, ?, ?)
+                """, (employee['id'], doc['document_type'], 
+                      f"file:///{filepath}", datetime.now().strftime('%Y-%m-%d')))
+            
+        except json.JSONDecodeError:
+            print(f"Erreur parsing documents pour {employee_name}")
+    
+    conn.commit()
+    conn.close()
+    
+    print("✓ Feedback et documents générés")
+
+# =============================================================================
+# utils/validation.py
+# =============================================================================
+
+from database import get_connection
+
+def validate_database():
+    """
+    Valide la cohérence de la base de données générée
+    """
+    print("Validation de la cohérence de la base de données...")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    checks = []
+    
+    # Vérification hiérarchie
+    cursor.execute("SELECT COUNT(*) FROM employee WHERE manager_id IS NULL")
+    dg_count = cursor.fetchone()[0]
+    checks.append(("DG unique", dg_count == 1))
+    
+    # Vérification cycles hiérarchiques
+    cursor.execute("""
+        WITH RECURSIVE hierarchy AS (
+            SELECT id, manager_id, 0 as level
+            FROM employee WHERE manager_id IS NULL
+            UNION ALL
+            SELECT e.id, e.manager_id, h.level + 1
+            FROM employee e
+            JOIN hierarchy h ON e.manager_id = h.id
+            WHERE h.level < 10
+        )
+        SELECT COUNT(*) FROM employee WHERE id NOT IN (SELECT id FROM hierarchy)
+    """)
+    orphans = cursor.fetchone()[0]
+    checks.append(("Pas de cycles hiérarchiques", orphans == 0))
+    
+    # Vérification affectations uniques
+    cursor.execute("""
+        SELECT employee_id, COUNT(*) as active_assignments
+        FROM assignment 
+        WHERE end_date IS NULL 
+        GROUP BY employee_id 
+        HAVING COUNT(*) > 1
+    """)
+    multiple_assignments = cursor.fetchall()
+    checks.append(("Affectations uniques par employé", len(multiple_assignments) == 0))
+    
+    # Vérification cohérence temporelle
+    cursor.execute("""
+        SELECT COUNT(*) FROM assignment 
+        WHERE start_date > end_date AND end_date IS NOT NULL
+    """)
+    invalid_dates = cursor.fetchone()[0]
+    checks.append(("Cohérence temporelle affectations", invalid_dates == 0))
+    
+    # Affichage des résultats
+    print("\nRésultats de validation:")
+    all_passed = True
+    for check_name, passed in checks:
+        status = "✓ PASS" if passed else "✗ FAIL"
+        print(f"  {check_name}: {status}")
+        if not passed:
+            all_passed = False
+    
+    conn.close()
+    
+    if all_passed:
+        print("\n✓ Toutes les validations sont passées avec succès")
+    else:
+        print("\n⚠ Certaines validations ont échoué")
+    
+    return all_passed
+
+# =============================================================================
+# FICHIERS DE PROMPTS
+# =============================================================================
+
+# prompts/01_organizational_structure.txt
+"""
+You are an HR data generator for a fictional company simulation.
+
+Generate a realistic organizational structure for:
+- Company: {company_name}
+- Sector: {sector}
+- Size: {size} employees
+- Culture: {culture}
+- Departments: {departments}
+- Hierarchy levels: {hierarchy_levels}
+
+Create a JSON response with:
+1. "organizational_units": Array of units with name and description
+2. "positions": Array of positions with title and description
+
+Requirements:
+- Units should reflect the departments mentioned
+- Positions should span from entry-level to executive
+- Descriptions should be realistic and sector-appropriate
+- Consider the company culture in naming and descriptions
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/02_employee_generation.txt
+"""
+You are an HR data generator creating realistic employee profiles.
+
+Generate {count} employee(s) for:
+- Position: {position}
+- Unit: {unit}
+- Sector: {sector}
+- Company culture: {culture}
+- Average tenure: {avg_tenure}
+
+Create a JSON response with:
+- "employees": Array of employee objects
+
+Each employee should have:
+- "first_name": French first name
+- "last_name": French last name  
+- "email": Professional email (first.last@company.com format)
+- "hire_date": Realistic hire date in YYYY-MM-DD format
+
+Requirements:
+- Names should be diverse and realistic
+- Email should be unique and professional
+- Hire dates should reflect realistic tenure distribution
+- Consider position seniority for hire dates
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/03_skills_generation.txt
+"""
+You are an HR data generator creating a comprehensive skills framework.
+
+Generate a skills framework for a {sector} company facing these challenges: {challenges}
+
+Create a JSON response with:
+- "skills": Array of skill objects
+
+Each skill should have:
+- "name": Skill name
+- "category": One of "Technical", "Soft Skills", "Management", "Domain Knowledge"
+
+Requirements:
+- Include 20-30 diverse skills
+- Mix technical skills relevant to {sector}
+- Include essential soft skills and management capabilities
+- Consider current market demands and the company challenges
+- Skills should be measurable and specific
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/03_employee_skills_assignment.txt
+"""
+You are an HR data generator assigning skills to employees.
+
+Assign realistic skills for:
+- Employee: {employee_name}
+- Position: {position}
+- Sector: {sector}
+- Available skills: {available_skills}
+
+Create a JSON response with:
+- "skills": Array of skill assignments
+
+Each skill assignment should have:
+- "skill": Exact skill name from available skills
+- "level": One of "Beginner", "Intermediate", "Advanced", "Expert"
+
+Requirements:
+- Assign 4-8 relevant skills per employee
+- Level should match position seniority and responsibilities
+- Include mix of technical and soft skills appropriate to role
+- Be realistic about skill distribution (not everyone is expert level)
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/04_goals_generation.txt
+"""
+You are an HR data generator creating SMART goals for performance management.
+
+Generate goals for:
+- Employee: {employee_name}
+- Position: {position}
+- Unit: {unit}
+- Year: {year}
+- Company challenges: {challenges}
+- Culture: {culture}
+
+Create a JSON response with:
+- "goals": Array of goal objects
+
+Each goal should have:
+- "description": Specific, measurable goal description
+- "status": One of "On Track", "Completed", "At Risk", "Not Started"
+
+Requirements:
+- 3-5 goals per employee
+- Goals should be SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
+- Mix of individual performance and team/company objectives
+- Reflect position responsibilities and company challenges
+- Status should be realistic distribution
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/04_performance_review.txt
+"""
+You are an HR manager conducting a performance review.
+
+Generate a performance review for:
+- Employee: {employee_name}
+- Position: {position}
+- Unit: {unit}
+- Year: {year}
+- Culture: {culture}
+
+Create a JSON response with:
+- "score": Integer from 1 to 5 (1=Poor, 2=Below Expectations, 3=Meets Expectations, 4=Exceeds Expectations, 5=Outstanding)
+- "comments": Detailed performance review comments
+
+Requirements:
+- Score should follow realistic distribution (most employees 3-4)
+- Comments should be professional, constructive, and specific
+- Include strengths and areas for improvement
+- Reflect company culture in tone and focus
+- Comments should be 100-200 words
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/05_training_catalog.txt
+"""
+You are an HR training manager creating a comprehensive training catalog.
+
+Generate training programs for:
+- Sector: {sector}
+- Company challenges: {challenges}
+- Training budget: {training_budget} per employee per year
+
+Create a JSON response with:
+- "training_programs": Array of training program objects
+
+Each program should have:
+- "name": Training program name
+- "description": Detailed description of content and objectives
+- "duration_hours": Duration in hours (realistic range 4-40)
+- "cost": Cost in euros (consider budget constraints)
+- "provider": "Internal" or "External Provider"
+
+Requirements:
+- 10-15 training programs
+- Mix of technical, leadership, and compliance training
+- Address company challenges specifically
+- Realistic costs that fit budget constraints
+- Diverse duration and delivery methods
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/05_training_assignment.txt
+"""
+You are an HR data generator assigning training to employees.
+
+Assign training history for:
+- Employee: {employee_name}
+- Available trainings: {available_trainings}
+- Budget per employee: {budget_per_employee}
+- Sector: {sector}
+
+Create a JSON response with:
+- "training_records": Array of training record objects
+
+Each record should have:
+- "training_name": Exact training name from available trainings
+- "score": Integer 1-100 or null if no scoring
+- "satisfaction_rating": Integer 1-5
+- "comments": Brief feedback about the training
+
+Requirements:
+- 1-3 trainings per employee (realistic distribution)
+- Consider employee role for training relevance
+- Realistic scores and satisfaction ratings
+- Stay within budget constraints
+- Comments should be realistic employee feedback
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/06_feedback_generation.txt
+"""
+You are generating 360-degree feedback for performance management.
+
+Generate feedback entries for:
+- Employee: {employee_name}
+- Position: {position}
+- Unit: {unit}
+- Culture: {culture}
+- Sector: {sector}
+
+Create a JSON response with:
+- "feedback_entries": Array of feedback objects
+
+Each feedback should have:
+- "from_employee_id": null (will be filled programmatically)
+- "feedback_type": One of "PEER_FEEDBACK", "UPWARD_FEEDBACK", "360_REVIEW"
+- "content": Detailed feedback content
+- "context": One of "Annual Review", "Project Collaboration", "Daily Work"
+- "is_anonymous": Boolean
+
+Requirements:
+- 2-4 feedback entries per employee
+- Mix of feedback types and contexts
+- Content should be constructive and professional
+- Reflect company culture in tone
+- Include both positive aspects and development areas
+
+Output only valid JSON without markdown formatting.
+"""
+
+# prompts/06_document_generation.txt
+"""
+You are generating HR documents for an employee profile.
+
+Generate documents for:
+- Employee: {employee_name}
+- Position: {position}
+- Sector: {sector}
+- Culture: {culture}
+
+Create a JSON response with:
+- "documents": Array of document objects
+
+Each document should have:
+- "document_type": One of "CV", "DIPLOMA", "CERTIFICATION", "TRAINING_CERTIFICATE"
+- "content": Full text content of the document
+
+Requirements:
+- 2-4 documents per employee
+- CV should be comprehensive and match position
+- Diplomas should be relevant to sector and position
+- Certifications should align with role requirements
+- Content should be realistic and detailed
+- French format and style
+
+Output only valid JSON without markdown formatting.
+"""
+
+# =============================================================================
+# FICHIER DE CONFIGURATION EXEMPLE
+# =============================================================================
+
+# config.yaml
+entreprise:
+  nom: "TechFlow Solutions"
+  secteur: "Software Development"
+  taille: 150
+  culture: "Innovation-driven, remote-friendly"
+  etape_croissance: "Scale-up"
+  defis:
+    - "High turnover"
+    - "Skill gaps in AI/ML"
+    - "Remote team management"
+  
+  structure_organisationnelle:
+    departements:
+      - "Engineering"
+      - "Sales" 
+      - "Marketing"
+      - "Human Resources"
+      - "Finance"
+    niveaux_hierarchiques: 4
+    style_management: "Flat hierarchy"
+  
+  contexte_rh:
+    anciennete_moyenne: "2.5 years"
+    taux_turnover: "15%"
+    budget_formation: "2000€/employee/year"
+    cycle_performance: "Annual + quarterly check-ins"
+  
+  base_de_données:
+    chemin: "db"
+    nom: "fake_sirh.sqlite"
+
+# =============================================================================
+# SCHEMA SQL COMPLET
+# =============================================================================
+
+# schema.sql
+CREATE TABLE IF NOT EXISTS employee (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    hire_date DATE NOT NULL,
+    manager_id INTEGER,
+    FOREIGN KEY (manager_id) REFERENCES employee(id)
+);
+
+CREATE TABLE IF NOT EXISTS organizational_unit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS position (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS assignment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    position_id INTEGER NOT NULL,
+    unit_id INTEGER NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    FOREIGN KEY (employee_id) REFERENCES employee(id),
+    FOREIGN KEY (position_id) REFERENCES position(id),
+    FOREIGN KEY (unit_id) REFERENCES organizational_unit(id)
+);
+
+CREATE TABLE IF NOT EXISTS skill (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS employee_skill (
+    employee_id INTEGER NOT NULL,
+    skill_id INTEGER NOT NULL,
+    level TEXT NOT NULL,
+    PRIMARY KEY (employee_id, skill_id),
+    FOREIGN KEY (employee_id) REFERENCES employee(id),
+    FOREIGN KEY (skill_id) REFERENCES skill(id)
+);
+
+CREATE TABLE IF NOT EXISTS goal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignee_id INTEGER NOT NULL,
+    assigner_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    evaluation_year INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    FOREIGN KEY (assignee_id) REFERENCES employee(id),
+    FOREIGN KEY (assigner_id) REFERENCES employee(id)
+);
+
+CREATE TABLE IF NOT EXISTS performance_review (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    reviewer_id INTEGER NOT NULL,
+    evaluation_year INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    comments TEXT,
+    FOREIGN KEY (employee_id) REFERENCES employee(id),
+    FOREIGN KEY (reviewer_id) REFERENCES employee(id)
+);
+
+CREATE TABLE IF NOT EXISTS training_program (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    duration_hours INTEGER,
+    cost REAL,
+    provider TEXT
+);
+
+CREATE TABLE IF NOT EXISTS training_record (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    training_program_id INTEGER NOT NULL,
+    completion_date DATE NOT NULL,
+    score INTEGER,
+    satisfaction_rating INTEGER,
+    comments TEXT,
+    FOREIGN KEY (employee_id) REFERENCES employee(id),
+    FOREIGN KEY (training_program_id) REFERENCES training_program(id)
+);
+
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_employee_id INTEGER NOT NULL,
+    to_employee_id INTEGER NOT NULL,
+    feedback_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    feedback_date DATE NOT NULL,
+    context TEXT,
+    is_anonymous BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (from_employee_id) REFERENCES employee(id),
+    FOREIGN KEY (to_employee_id) REFERENCES employee(id)
+);
+
+CREATE TABLE IF NOT EXISTS document (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    document_type TEXT NOT NULL,
+    uri TEXT NOT NULL,
+    creation_date DATE NOT NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(id)
+);
+
+-- Index pour améliorer les performances
+CREATE INDEX IF NOT EXISTS idx_employee_manager ON employee(manager_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_employee ON assignment(employee_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_active ON assignment(employee_id, end_date);
+CREATE INDEX IF NOT EXISTS idx_feedback_to_employee ON feedback(to_employee_id);
+CREATE INDEX IF NOT EXISTS idx_document_employee ON document(employee_id);

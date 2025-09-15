@@ -1,0 +1,44 @@
+tables-perplexity
+
+Pour modéliser l’entreprise en SQLite, voici une liste des tables recommandées, sans précision formelle de schéma :
+
+Entreprises
+
+Départements / Divisions
+
+Équipes / Groupes
+
+Postes / Fonctions
+
+Hiérarchie des postes
+
+Employés (données personnelles fictives)
+
+Profils (compétences, spécialisations)
+
+CV et expériences passées
+
+Diplômes et certifications
+
+Contrats de travail
+
+Affectations des employés aux postes et départements
+
+Horaires / temps de travail
+
+Parcours de carrière interne
+
+Évaluations de performance (notes, commentaires)
+
+Objectifs et indicateurs
+
+Formations et développement
+
+Feedbacks / revues collaboratives
+
+Projets ou missions attribués
+
+Référentiel de compétences
+
+Types de postes ou catégories métiers
+

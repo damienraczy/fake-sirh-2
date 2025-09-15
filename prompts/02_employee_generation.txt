@@ -1,0 +1,28 @@
+# prompts/02_employee_generation.txt
+"""
+You are an HR data generator creating realistic employee profiles.
+
+Generate {count} employee(s) for:
+- Position: {position}
+- Unit: {unit}
+- Sector: {sector}
+- Company culture: {culture}
+- Average tenure: {avg_tenure}
+
+Create a JSON response with:
+- "employees": Array of employee objects
+
+Each employee should have:
+- "first_name": French first name
+- "last_name": French last name  
+- "email": Professional email (first.last@company.com format)
+- "hire_date": Realistic hire date in YYYY-MM-DD format
+
+Requirements:
+- Names should be diverse and realistic
+- Email should be unique and professional
+- Hire dates should reflect realistic tenure distribution
+- Consider position seniority for hire dates
+
+Output only valid JSON without markdown formatting.
+"""

@@ -1,0 +1,30 @@
+# prompts/06_feedback_generation.txt
+"""
+You are generating 360-degree feedback for performance management.
+
+Generate feedback entries for:
+- Employee: {employee_name}
+- Position: {position}
+- Unit: {unit}
+- Culture: {culture}
+- Sector: {sector}
+
+Create a JSON response with:
+- "feedback_entries": Array of feedback objects
+
+Each feedback should have:
+- "from_employee_id": null (will be filled programmatically)
+- "feedback_type": One of "PEER_FEEDBACK", "UPWARD_FEEDBACK", "360_REVIEW"
+- "content": Detailed feedback content
+- "context": One of "Annual Review", "Project Collaboration", "Daily Work"
+- "is_anonymous": Boolean
+
+Requirements:
+- 2-4 feedback entries per employee
+- Mix of feedback types and contexts
+- Content should be constructive and professional
+- Reflect company culture in tone
+- Include both positive aspects and development areas
+
+Output only valid JSON without markdown formatting.
+"""

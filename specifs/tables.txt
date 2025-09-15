@@ -1,0 +1,130 @@
+### Schéma de base de données complet (12 tables)
+
+#### 1. `employee`
+La table centrale contenant les informations sur chaque personne.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de l'employé.
+* `first_name` (TEXT) : Prénom.
+* `last_name` (TEXT) : Nom de famille.
+* `email` (TEXT, Unique) : Adresse email professionnelle.
+* `hire_date` (DATE) : Date d'embauche.
+* `manager_id` (INTEGER, Foreign Key -> `employee.id`) : L'identifiant du manager. Ce champ est `NULL` uniquement pour le directeur général.
+
+#### 2. `organizational_unit`
+Définit les différentes unités organisationnelles (départements, services).
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de l'unité.
+* `name` (TEXT) : Nom de l'unité (ex. : "Sales", "IT Core Team").
+* `description` (TEXT) : Description des missions de l'unité.
+
+#### 3. `position`
+Le catalogue de tous les rôles possibles dans l'entreprise.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique du poste.
+* `title` (TEXT) : Intitulé du poste (ex. : "Senior Developer", "Financial Analyst").
+* `description` (TEXT) : Description des responsabilités du poste.
+
+#### 4. `assignment`
+Lie un employé à un poste dans une unité pour une période donnée.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de l'affectation.
+* `employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé concerné.
+* `position_id` (INTEGER, Foreign Key -> `position.id`) : Le poste occupé.
+* `unit_id` (INTEGER, Foreign Key -> `organizational_unit.id`) : L'unité de rattachement.
+* `start_date` (DATE) : Date de début de l'affectation.
+* `end_date` (DATE, Nullable) : Date de fin (si l'employé a changé de poste).
+
+#### 5. `skill`
+Le référentiel des compétences.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de la compétence.
+* `name` (TEXT) : Nom de la compétence (ex. : "Python", "Commercial Negotiation").
+* `category` (TEXT) : Catégorie (ex. : "Technical", "Soft Skill").
+
+#### 6. `employee_skill`
+Table de jonction pour les compétences des employés.
+
+* `employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé.
+* `skill_id` (INTEGER, Foreign Key -> `skill.id`) : La compétence.
+* `level` (TEXT) : Niveau de maîtrise (ex. : "Beginner", "Intermediate", "Expert").
+
+#### 7. `goal`
+Les objectifs fixés pour une période, avec leur origine.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de l'objectif.
+* `assignee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé qui doit réaliser l'objectif.
+* `assigner_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé (généralement le manager) qui a fixé l'objectif.
+* `description` (TEXT) : Description de l'objectif.
+* `evaluation_year` (INTEGER) : L'année pour laquelle l'objectif est fixé.
+* `status` (TEXT) : Statut (ex. : "On Track", "Completed", "At Risk").
+
+#### 8. `performance_review`
+Les résultats des entretiens de performance.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de l'évaluation.
+* `employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé qui est évalué.
+* `reviewer_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé qui réalise l'évaluation.
+* `evaluation_year` (INTEGER) : L'année de l'évaluation.
+* `score` (INTEGER) : Note globale (ex. : de 1 à 5).
+* `comments` (TEXT) : Commentaires qualitatifs.
+
+#### 9. `document`
+Gère les liens vers les fichiers texte externes.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique du document.
+* `employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé auquel le document est rattaché.
+* `document_type` (TEXT) : Type de document (ex. : "CV", "DIPLOMA", "CERTIFICATION").
+* `uri` (TEXT) : Le chemin d'accès (URI) vers le fichier texte (ex. : `file:///data/docs/emp_101_cv.txt`).
+* `creation_date` (DATE) : Date d'ajout du document.
+
+#### 10. `training_program`
+Catalogue des formations disponibles dans l'entreprise.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique de la formation.
+* `name` (TEXT) : Nom de la formation (ex. : "Leadership Fundamentals", "Advanced Python").
+* `description` (TEXT) : Description détaillée de la formation.
+* `duration_hours` (INTEGER) : Durée en heures.
+* `cost` (REAL) : Coût de la formation.
+* `provider` (TEXT) : Organisme de formation (ex. : "Internal", "External Provider").
+
+#### 11. `training_record`
+Historique des formations suivies par les employés.
+
+* `id` (INTEGER, Primary Key) : Identifiant unique du suivi de formation.
+* `employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé qui a suivi la formation.
+* `training_program_id` (INTEGER, Foreign Key -> `training_program.id`) : La formation suivie.
+* `completion_date` (DATE) : Date de fin de formation.
+* `score` (INTEGER, Nullable) : Score obtenu (ex. : de 1 à 100, ou NULL si pas de notation).
+* `satisfaction_rating` (INTEGER) : Note de satisfaction (ex. : de 1 à 5).
+* `comments` (TEXT) : Commentaires sur la formation.
+
+#### 12. `feedback`
+Retours et commentaires entre employés (feedback 360°, retours ponctuels).
+
+* `id` (INTEGER, Primary Key) : Identifiant unique du feedback.
+* `from_employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé qui donne le feedback.
+* `to_employee_id` (INTEGER, Foreign Key -> `employee.id`) : L'employé qui reçoit le feedback.
+* `feedback_type` (TEXT) : Type de feedback (ex. : "360_REVIEW", "PEER_FEEDBACK", "UPWARD_FEEDBACK").
+* `content` (TEXT) : Contenu du feedback.
+* `feedback_date` (DATE) : Date du feedback.
+* `context` (TEXT) : Contexte (ex. : "Annual Review", "Project Collaboration", "Daily Work").
+* `is_anonymous` (BOOLEAN) : Indique si le feedback est anonyme.
+
+### Relations principales
+
+- **Hiérarchie** : `employee.manager_id` → `employee.id`
+- **Affectations** : `assignment` lie `employee`, `position` et `organizational_unit`
+- **Compétences** : `employee_skill` lie `employee` et `skill`
+- **Objectifs** : `goal` avec assigné (`assignee_id`) et assigneur (`assigner_id`)
+- **Évaluations** : `performance_review` lie employé évalué et évaluateur
+- **Documents** : `document` rattaché à un `employee`
+- **Formations** : `training_record` lie `employee` et `training_program`
+- **Feedback** : `feedback` entre deux `employee` (donneur et receveur)
+
+### Contraintes importantes
+
+1. **Hiérarchie obligatoire** : Tous les employés ont un `manager_id` sauf le directeur général
+2. **Unicité email** : Chaque employé a un email unique
+3. **Affectations actuelles** : Un employé ne peut avoir qu'une seule affectation active (sans `end_date`)
+4. **Feedback non auto-référentiel** : `from_employee_id` ≠ `to_employee_id`
+5. **Cohérence temporelle** : `start_date` ≤ `end_date` dans `assignment`

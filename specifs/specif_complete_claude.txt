@@ -1,0 +1,255 @@
+# Logique de création d'entreprise - Fake-sirh-2
+
+## 🎯 Vue d'ensemble du processus
+
+```
+Description macroscopique → Génération progressive → Base de données complète
+```
+
+## 📋 Phase 1 : Description macroscopique (Input humain)
+
+### Paramètres d'entrée
+```yaml
+company_profile:
+  name: "TechFlow Solutions"
+  sector: "Software Development"
+  size: 150
+  locations: ["Paris", "Lyon"]
+  culture: "Innovation-driven, remote-friendly"
+  growth_stage: "Scale-up"
+  challenges: ["High turnover", "Skill gaps in AI/ML"]
+  
+organizational_structure:
+  departments: ["Engineering", "Sales", "Marketing", "HR", "Finance"]
+  hierarchy_levels: 4
+  management_style: "Flat hierarchy"
+  
+hr_context:
+  avg_tenure: "2.5 years"
+  turnover_rate: "15%"
+  training_budget: "2000€/employee/year"
+  performance_cycle: "Annual + quarterly check-ins"
+```
+
+## 🔄 Phase 2 : Génération progressive (6 étapes)
+
+### Étape 1 : Structure organisationnelle
+**Tables : `organizational_unit`, `position`**
+
+```python
+# CLI: python generate.py --step=structure --profile=company_profile.yaml
+
+# Prompt Ollama:
+"""
+Basé sur une entreprise {sector} de {size} employés avec culture {culture},
+génère la structure organisationnelle :
+
+1. Liste des unités organisationnelles avec descriptions
+2. Hiérarchie entre unités (parent/enfant)
+3. Positions types par unité avec niveaux hiérarchiques
+4. Descriptions réalistes des responsabilités
+
+Format: JSON structuré
+"""
+```
+
+### Étape 2 : Population et hiérarchie
+**Tables : `employee`, `assignment`**
+
+```python
+# CLI: python generate.py --step=employees --profile=company_profile.yaml
+
+# Logique :
+1. Générer le DG (manager_id = NULL)
+2. Pour chaque unité, générer le manager
+3. Générer les employés par niveau hiérarchique
+4. Assigner les relations manager/managé
+5. Créer les affectations position/unité actuelles
+
+# Prompt Ollama pour chaque employé:
+"""
+Génère un profil d'employé réaliste pour le poste {position} 
+dans l'unité {unit} d'une entreprise {sector}.
+
+Contraintes:
+- Prénom/nom français
+- Email cohérent
+- Date d'embauche selon ancienneté moyenne {avg_tenure}
+- Profil adapté au poste et à la culture d'entreprise
+
+Format: JSON avec first_name, last_name, email, hire_date
+"""
+```
+
+### Étape 3 : Compétences et référentiels
+**Tables : `skill`, `employee_skill`**
+
+```python
+# CLI: python generate.py --step=skills --profile=company_profile.yaml
+
+# Logique :
+1. Générer référentiel de compétences par secteur/métier
+2. Distribuer les compétences selon les postes
+3. Générer des niveaux réalistes avec variabilité
+
+# Prompt Ollama:
+"""
+Pour une entreprise {sector}, génère :
+
+1. Référentiel de compétences (techniques + soft skills)
+2. Répartition par catégorie (Technical, Management, Soft Skills)
+3. Matrice compétences/postes avec niveaux attendus
+
+Puis assigne des niveaux réalistes à chaque employé selon :
+- Son poste actuel
+- Son ancienneté
+- Variabilité naturelle des équipes
+"""
+```
+
+### Étape 4 : Objectifs et performance
+**Tables : `goal`, `performance_review`**
+
+```python
+# CLI: python generate.py --step=performance --profile=company_profile.yaml
+
+# Logique :
+1. Générer objectifs annuels par employé (individuels + collectifs)
+2. Créer historique d'évaluations (2-3 ans)
+3. Distribuer les scores selon une courbe réaliste
+4. Générer commentaires cohérents avec les scores
+
+# Prompt Ollama:
+"""
+Génère des objectifs SMART et évaluations pour {employee_name}, 
+{position} dans l'équipe {unit}.
+
+Contexte entreprise : {challenges}, culture {culture}
+
+Créer :
+1. 3-5 objectifs annuels adaptés au poste
+2. Évaluation avec score (1-5) et commentaires détaillés
+3. Cohérence objectifs/résultats/commentaires
+4. Style managérial selon la culture d'entreprise
+"""
+```
+
+### Étape 5 : Formations et développement
+**Tables : `training_program`, `training_record`**
+
+```python
+# CLI: python generate.py --step=training --profile=company_profile.yaml
+
+# Logique :
+1. Créer catalogue de formations (internes + externes)
+2. Distribuer formations selon besoins métier
+3. Générer historique avec scores et satisfaction
+4. Respecter budget formation global
+
+# Prompt Ollama:
+"""
+Pour une entreprise {sector} avec budget formation {training_budget},
+génère :
+
+1. Catalogue de formations (leadership, technique, compliance)
+2. Historique formations par employé (6 derniers mois)
+3. Scores et commentaires réalistes
+4. Focus sur {challenges} identifiés
+
+Répartition intelligente selon postes et lacunes compétences.
+"""
+```
+
+### Étape 6 : Feedback et documents
+**Tables : `feedback`, `document`**
+
+```python
+# CLI: python generate.py --step=feedback_docs --profile=company_profile.yaml
+
+# Logique :
+1. Générer feedback 360° avec fréquence réaliste
+2. Créer documents (CV, diplômes, attestations)
+3. Assurer cohérence documents/profils/compétences
+
+# Prompt Ollama:
+"""
+Génère feedback et documents pour {employee_name} :
+
+1. Feedback reçus/donnés (pairs, managers, équipes)
+2. CV cohérent avec poste et compétences
+3. Diplômes et certifications adaptés
+4. Attestations de formations suivies
+
+Style : {culture}, secteur {sector}
+Cohérence totale avec le profil existant.
+"""
+```
+
+## 🔧 Phase 3 : Validation et ajustements
+
+### Contrôles automatiques
+```python
+# CLI: python validate.py --check=all
+
+checks = [
+    "hierarchy_integrity",      # Pas de cycles, DG unique
+    "assignment_consistency",   # Une seule affectation active/employé
+    "skill_distribution",       # Niveaux cohérents par poste
+    "performance_coherence",    # Objectifs/évaluations/feedback alignés
+    "temporal_consistency",     # Dates logiques
+    "budget_compliance"         # Formation dans les budgets
+]
+```
+
+### Ajustements par LLM
+```python
+# Si incohérences détectées :
+# Prompt Ollama pour corrections ciblées
+
+"""
+Corrige les incohérences suivantes dans les données RH :
+
+Problèmes détectés :
+{validation_errors}
+
+Contexte entreprise : {company_profile}
+
+Propose des ajustements minimaux pour restaurer la cohérence
+tout en gardant le réalisme.
+"""
+```
+
+## 🎮 Interface CLI proposée
+
+```bash
+# Génération complète
+python fake_sirh.py generate --profile=techflow.yaml --output=database.sqlite
+
+# Génération par étapes
+python fake_sirh.py generate --step=structure --profile=techflow.yaml
+python fake_sirh.py generate --step=employees --continue
+python fake_sirh.py generate --step=skills --continue
+
+# Validation
+python fake_sirh.py validate --database=database.sqlite
+
+# Export pour RAG
+python fake_sirh.py export --format=documents --output=rag_corpus/
+```
+
+## 🎯 Avantages de cette approche
+
+1. **Cohérence garantie** : Génération progressive avec validation
+2. **Flexibilité** : Paramétrage fin via profil d'entreprise
+3. **Réalisme** : LLM adapte selon secteur/culture/contraintes
+4. **Rapidité** : Automatisation complète après paramétrage initial
+5. **Debugging** : Génération par étapes pour isolation des problèmes
+6. **Reproductibilité** : Seeds et profils versionnés
+
+## 📊 Métriques de qualité
+
+- **Cohérence hiérarchique** : 100% (validation automatique)
+- **Réalisme des profils** : Évaluation manuelle sur échantillon
+- **Diversité des données** : Métriques de dispersion
+- **Completude** : Pourcentage de champs remplis
+- **Performance RAG** : Tests de requêtes types

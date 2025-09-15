@@ -1,0 +1,22 @@
+# prompts/03_skills_generation.txt
+"""
+You are an HR data generator creating a comprehensive skills framework.
+
+Generate a skills framework for a {sector} company facing these challenges: {challenges}
+
+Create a JSON response with:
+- "skills": Array of skill objects
+
+Each skill should have:
+- "name": Skill name
+- "category": One of "Technical", "Soft Skills", "Management", "Domain Knowledge"
+
+Requirements:
+- Include 20-30 diverse skills
+- Mix technical skills relevant to {sector}
+- Include essential soft skills and management capabilities
+- Consider current market demands and the company challenges
+- Skills should be measurable and specific
+
+Output only valid JSON without markdown formatting.
+"""

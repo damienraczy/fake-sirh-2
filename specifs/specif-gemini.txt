@@ -1,0 +1,16 @@
+specif-gemini
+
+On ca faire les spécifications d'un "fake sirh" qui simulera le fonctionnement d'une entreprise.
+
+Pas d'interface, que la base de donnée.
+
+Pour construire les données, on utilisera des CLI python avec des appels à ollama turbo (ollama.com) qui est sorti sur le marché il y a moins d'un mois.
+
+On construira l'entreprise à partir d'une description macroscopique.
+
+L'utilité sera ensuite d'utiliser les données dans un RAG pour aider les entreprises sur des problématiques RH ou organisationnelles.
+
+
+
+le projet s'appelle "fake-sirh-2"
+

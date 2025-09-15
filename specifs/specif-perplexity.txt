@@ -1,0 +1,11 @@
+specif-perplexity
+
+Le projet Fake-sirh-2 consiste à créer une simulation de SIRH (Système d’Information des Ressources Humaines) destinée à reproduire le fonctionnement d’une entreprise, sans développer d’interface utilisateur. L’ensemble repose uniquement sur une base de données qui contiendra les informations nécessaires pour représenter la structure et les processus RH d’une organisation.
+
+La génération des données ne sera pas manuelle : nous utiliserons des scripts en ligne de commande écrits en Python (CLI). Ces scripts s’appuieront sur Ollama Turbo (un outil récent proposé par ollama.com) afin de produire du contenu réaliste à partir de descriptions textuelles.
+
+L’entreprise simulée sera construite à partir d’une description macroscopique (par exemple : taille de l’organisation, métiers présents, organigramme, postes, carrières, compétences, évaluations, affectations, etc.). Ces descriptions permettront de générer automatiquement l’ensemble des données RH fictives (CV, historiques, évaluations de performance, etc.) qui alimenteront la base.
+
+Une fois constituée, cette base servira de corpus de référence dans un système de RAG (Retrieval-Augmented Generation). L’objectif final est de permettre à des entreprises — notamment de petite et moyenne taille — d’explorer, à travers des cas concrets, comment l’IA peut répondre à des problématiques RH ou organisationnelles (ex. gestion des carrières, suivi des performances, planification des ressources).
+
+En résumé, Fake-sirh-2 est un banc d’essai fictif pour tester et démontrer des solutions RH assistées par IA, sans nécessiter de données réelles d’entreprises.

@@ -1,0 +1,25 @@
+# prompts/03_employee_skills_assignment.txt
+"""
+You are an HR data generator assigning skills to employees.
+
+Assign realistic skills for:
+- Employee: {employee_name}
+- Position: {position}
+- Sector: {sector}
+- Available skills: {available_skills}
+
+Create a JSON response with:
+- "skills": Array of skill assignments
+
+Each skill assignment should have:
+- "skill": Exact skill name from available skills
+- "level": One of "Beginner", "Intermediate", "Advanced", "Expert"
+
+Requirements:
+- Assign 4-8 relevant skills per employee
+- Level should match position seniority and responsibilities
+- Include mix of technical and soft skills appropriate to role
+- Be realistic about skill distribution (not everyone is expert level)
+
+Output only valid JSON without markdown formatting.
+"""

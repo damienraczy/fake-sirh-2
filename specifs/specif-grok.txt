@@ -1,0 +1,20 @@
+specif-grok
+
+Nous allons définir et établir les spécifications détaillées pour un système simulé appelé "faux SIRH" (Système d'Information des Ressources Humaines fictif). Ce système vise à reproduire de manière réaliste le fonctionnement interne d'une entreprise, sans implémenter aucune interface utilisateur graphique ou interactive. Au lieu de cela, il se concentrera exclusivement sur la création et la gestion d'une base de données contenant des données simulées.
+Composants Principaux du Système
+
+Base de Données Exclusive : Le cœur du système sera une base de données qui stockera toutes les informations relatives à l'entreprise simulée. Aucune interface (comme une API web, une application desktop ou mobile) ne sera développée ; l'accès et les manipulations se feront uniquement via des outils en ligne de commande ou des scripts.
+Génération des Données : Pour populer la base de données avec des données fictives mais cohérentes, nous utiliserons des outils en ligne de commande (CLI) écrits en Python. Ces CLI intégreront des appels à l'outil Ollama Turbo, accessible via le site ollama.com. Ollama Turbo est un outil d'intelligence artificielle récemment lancé sur le marché, conçu pour générer du contenu textuel ou structuré de manière avancée, ce qui permettra de créer des données réalistes et variées.
+
+Méthodologie de Construction
+
+Description Macroscopique de l'Entreprise : L'entreprise simulée sera modélisée à partir d'une description globale et haut niveau (macroscopique). Cela inclura des éléments tels que la structure organisationnelle, les départements, les rôles des employés, les processus RH, les indicateurs de performance, et d'autres aspects opérationnels. Cette approche permettra de générer une représentation holistique et scalable de l'entreprise, sans entrer dans des détails microscopiques inutiles au stade initial.
+
+Objectifs et Utilisations
+
+Intégration avec un Système RAG : Une fois les données générées et stockées dans la base de données, elles seront utilisées au sein d'un système de Retrieval-Augmented Generation (RAG). Ce RAG combinera la recherche de données (retrieval) avec la génération de réponses basées sur des modèles de langage, afin d'assister les entreprises réelles dans la résolution de problématiques liées aux ressources humaines (RH) ou à l'organisation interne. Par exemple, cela pourrait inclure des analyses de turnover, des recommandations pour l'optimisation des équipes, ou des simulations de scénarios organisationnels.
+
+Nom et Contexte du Projet
+
+Nom du Projet : Le projet porte le nom "Fake-sirh-2", indiquant qu'il s'agit d'une version itérative ou améliorée d'un concept précédent de SIRH fictif.
+

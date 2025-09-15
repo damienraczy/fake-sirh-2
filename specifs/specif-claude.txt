@@ -1,0 +1,36 @@
+specif-claude
+
+Projet "fake-sirh-2" : Spécifications d'un Simulateur de Système RH
+Objectif Principal
+Développer un système de simulation d'entreprise ("fake SIRH") qui génère des données RH réalistes pour alimenter des analyses organisationnelles et des solutions d'aide à la décision.
+Architecture Technique
+Composants Core
+
+Base de données uniquement : Pas d'interface utilisateur graphique
+Générateur de données via CLI Python : Scripts en ligne de commande pour peupler la base
+Moteur d'IA : Intégration avec Ollama Turbo (modèle récent, < 1 mois sur le marché)
+
+Processus de Génération
+
+Input : Description macroscopique de l'entreprise cible
+Processing : Utilisation d'Ollama Turbo via API pour générer les données détaillées
+Output : Base de données structurée avec données RH cohérentes
+
+Cas d'Usage Final
+
+Application RAG : Les données générées serviront de corpus pour un système de Retrieval-Augmented Generation
+Support décisionnel : Aide aux entreprises sur les problématiques RH et organisationnelles
+Simulation de scénarios : Modélisation de différents types d'organisations
+
+Workflow de Développement
+
+Définition du schéma de base de données
+Développement des CLI Python
+Intégration des appels API vers Ollama Turbo
+Tests de génération sur différents profils d'entreprise
+Validation de la cohérence des données générées
+
+Nom du Projet
+fake-sirh-2
+
+
