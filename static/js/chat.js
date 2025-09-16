@@ -1,5 +1,5 @@
 /* =============================================================================
-   RAG SIRH - Logique du chat
+   RAG SIRH - Chat avec mémoire conversationnelle
    ============================================================================= */
 
 class ChatManager {
@@ -8,6 +8,8 @@ class ChatManager {
         this.inputField = null;
         this.sendButton = null;
         this.messageCount = 0;
+        this.sessionId = null; // Nouveau : ID de session
+        this.conversationLength = 0; // Nouveau : Longueur conversation
         
         this.init();
     }
@@ -37,6 +39,9 @@ class ChatManager {
         
         // Charger les statistiques
         this.loadStats();
+        
+        // Afficher info session
+        this.showSessionInfo();
     }
 
     setupEventListeners() {
@@ -83,8 +88,17 @@ class ChatManager {
         AppState.setLoading(true);
 
         try {
-            // Appeler l'API RAG
-            const response = await ApiClient.query(question);
+            // Appeler l'API RAG avec session
+            const response = await ApiClient.queryWithSession(question, this.sessionId);
+            
+            // Mettre à jour l'ID de session si nouveau
+            if (!this.sessionId) {
+                this.sessionId = response.session_id;
+                this.showSessionInfo();
+            }
+            
+            // Mettre à jour la longueur de conversation
+            this.conversationLength = response.conversation_length;
             
             // Afficher la réponse
             this.addMessage('assistant', response.answer, response);
@@ -138,7 +152,7 @@ class ChatManager {
 
         messageDiv.appendChild(bubbleDiv);
 
-        // Ajouter les métadonnées si disponibles
+        // Ajouter les métadonnées si disponibles (version étendue)
         if (metadata && role === 'assistant') {
             const metaDiv = this.createMetadataElement(metadata);
             messageDiv.appendChild(metaDiv);
@@ -179,11 +193,71 @@ class ChatManager {
             items.push(`⏱️ ${metadata.response_time}s`);
         }
 
+        // Nouveau : Info conversation
+        if (metadata.conversation_length) {
+            items.push(`💬 ${metadata.conversation_length} msg`);
+        }
+
         metaDiv.innerHTML = items.map(item => 
             `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${item}</span>`
         ).join('');
 
         return metaDiv;
+    }
+
+    showSessionInfo() {
+        // Afficher l'info de session si une session est active
+        if (this.sessionId) {
+            let sessionInfo = document.getElementById('session-info');
+            if (!sessionInfo) {
+                sessionInfo = document.createElement('div');
+                sessionInfo.id = 'session-info';
+                sessionInfo.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    left: 20px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 0.75rem;
+                    color: #64748b;
+                    z-index: 100;
+                `;
+                document.body.appendChild(sessionInfo);
+            }
+            
+            sessionInfo.innerHTML = `
+                🧠 Session: ${this.sessionId.substring(0, 8)}...
+                ${this.conversationLength > 0 ? `| ${this.conversationLength} messages` : ''}
+                <button onclick="chatManager.clearSession()" style="margin-left: 8px; background: none; border: none; color: #dc2626; cursor: pointer; font-size: 0.75rem;">
+                    🗑️ Effacer
+                </button>
+            `;
+        }
+    }
+
+    clearSession() {
+        if (confirm('Voulez-vous vraiment effacer cette conversation ?')) {
+            this.sessionId = null;
+            this.conversationLength = 0;
+            this.messageCount = 0;
+            
+            // Vider l'interface
+            this.messagesContainer.innerHTML = `
+                <div class="welcome-message">
+                    <p>Nouvelle conversation démarrée. Posez vos questions sur les données RH.</p>
+                </div>
+            `;
+            
+            // Supprimer l'info de session
+            const sessionInfo = document.getElementById('session-info');
+            if (sessionInfo) {
+                sessionInfo.remove();
+            }
+            
+            Utils.showNotification('Conversation effacée');
+        }
     }
 
     askQuestion(question) {
@@ -219,16 +293,20 @@ class ChatManager {
 
     async loadStats() {
         try {
-            const [status, departments] = await Promise.all([
+            const [status, departments, memoryStats] = await Promise.all([
                 ApiClient.getStatus(),
-                ApiClient.getDepartments()
+                ApiClient.getDepartments(),
+                ApiClient.getMemoryStats()
             ]);
 
             const stats = {
                 employees: departments.reduce((sum, dept) => sum + dept.count, 0),
                 departments: departments.length,
                 documents: status.documents_indexed,
-                systemReady: status.system_ready
+                systemReady: status.system_ready,
+                memoryEnabled: status.memory_enabled,
+                totalSessions: memoryStats.total_sessions,
+                totalMessages: memoryStats.total_messages
             };
 
             AppState.setStats(stats);
@@ -258,6 +336,10 @@ class ChatManager {
                 <span class="stat-value">${Utils.formatNumber(stats.documents)}</span>
             </div>
             <div class="stat-item">
+                <span class="stat-label">🧠 Sessions</span>
+                <span class="stat-value">${Utils.formatNumber(stats.totalSessions || 0)}</span>
+            </div>
+            <div class="stat-item">
                 <span class="stat-label">
                     ${stats.systemReady ? '✅' : '⚠️'} Statut
                 </span>
@@ -274,6 +356,35 @@ class ChatManager {
             statsContainer.innerHTML = '<div class="error">Erreur de chargement</div>';
         }
     }
+
+    // Nouvelles méthodes pour la gestion de mémoire
+    
+    async getConversationHistory() {
+        if (!this.sessionId) {
+            Utils.showNotification('Aucune session active', 'warning');
+            return;
+        }
+        
+        try {
+            const history = await ApiClient.getConversationHistory(this.sessionId);
+            console.log('Historique de conversation:', history);
+            return history;
+        } catch (error) {
+            console.error('Erreur récupération historique:', error);
+            Utils.showNotification('Erreur récupération historique', 'error');
+        }
+    }
+
+    async searchInHistory(query) {
+        try {
+            const results = await ApiClient.searchConversations(query);
+            console.log('Résultats recherche:', results);
+            return results;
+        } catch (error) {
+            console.error('Erreur recherche:', error);
+            Utils.showNotification('Erreur de recherche', 'error');
+        }
+    }
 }
 
 // Initialiser le gestionnaire de chat
@@ -281,3 +392,4 @@ const chatManager = new ChatManager();
 
 // Export global pour compatibilité
 window.ChatManager = chatManager;
+window.chatManager = chatManager;

@@ -1,0 +1,62 @@
+<!-- sirh/templates/skills.html -->
+{% extends "base.html" %}
+
+{% block title %}Compétences - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<h1 class="card-title mb-6">🎯 Compétences</h1>
+
+<div class="card">
+    <div id="skillsList"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadSkills() {
+    Utils.showLoading('skillsList');
+    
+    try {
+        const skills = await SirhAPI.getSkills();
+        
+        const columns = [
+            { key: 'name', label: 'Compétence' },
+            { key: 'category', label: 'Catégorie', type: 'badge', badgeClass: () => 'badge-primary' },
+            { key: 'employee_count', label: 'Employés', render: (count) => Utils.formatNumber(count) },
+            { 
+                key: 'id', 
+                label: 'Actions', 
+                render: (id) => `<button onclick="showSkillEmployees(${id})" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Voir employés</button>`
+            }
+        ];
+        
+        TableManager.create('skillsList', skills, columns);
+        
+    } catch (error) {
+        Utils.showError('skillsList');
+    }
+}
+
+async function showSkillEmployees(skillId) {
+    try {
+        const employees = await SirhAPI.getSkillEmployees(skillId);
+        
+        if (employees.length === 0) {
+            alert('Aucun employé avec cette compétence');
+            return;
+        }
+        
+        const employeesList = employees.map(emp => 
+            `• ${emp.first_name} ${emp.last_name} - ${emp.level} (${emp.department || 'Département non défini'})`
+        ).join('\n');
+        
+        alert(`Employés avec cette compétence:\n\n${employeesList}`);
+        
+    } catch (error) {
+        alert('Erreur lors du chargement des employés');
+    }
+}
+
+loadSkills();
+</script>
+{% endblock %}

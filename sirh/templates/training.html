@@ -1,0 +1,66 @@
+<!-- sirh/templates/training.html -->
+{% extends "base.html" %}
+
+{% block title %}Formations - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<h1 class="card-title mb-6">🎓 Formations</h1>
+
+<div class="card">
+    <div id="trainingList"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadTraining() {
+    Utils.showLoading('trainingList');
+    
+    try {
+        const programs = await SirhAPI.getTraining();
+        
+        const columns = [
+            { key: 'name', label: 'Formation' },
+            { key: 'provider', label: 'Fournisseur' },
+            { key: 'duration_hours', label: 'Durée (h)', render: (hours) => `${hours}h` },
+            { key: 'cost', label: 'Coût', render: (cost) => `${Utils.formatNumber(cost)} €` },
+            { key: 'completion_count', label: 'Complétions', render: (count) => Utils.formatNumber(count) },
+            { 
+                key: 'id', 
+                label: 'Actions', 
+                render: (id) => `<button onclick="showTrainingRecords(${id})" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Voir records</button>`
+            }
+        ];
+        
+        TableManager.create('trainingList', programs, columns);
+        
+    } catch (error) {
+        Utils.showError('trainingList');
+    }
+}
+
+async function showTrainingRecords(programId) {
+    try {
+        const records = await SirhAPI.getTrainingRecords(programId);
+        
+        if (records.length === 0) {
+            alert('Aucun enregistrement pour cette formation');
+            return;
+        }
+        
+        const recordsList = records.map(record => 
+            `• ${record.first_name} ${record.last_name} - ${Utils.formatDate(record.completion_date)}` +
+            (record.score ? ` (Score: ${record.score}/100)` : '') +
+            (record.satisfaction_rating ? ` (Satisfaction: ${record.satisfaction_rating}/5)` : '')
+        ).join('\n');
+        
+        alert(`Enregistrements de formation:\n\n${recordsList}`);
+        
+    } catch (error) {
+        alert('Erreur lors du chargement des enregistrements');
+    }
+}
+
+loadTraining();
+</script>
+{% endblock %}

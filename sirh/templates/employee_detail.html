@@ -1,0 +1,188 @@
+<!-- sirh/templates/employee_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ employee_id }} - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/employees" style="color: var(--primary); text-decoration: none;">← Retour aux employés</a>
+</div>
+
+<h1 class="card-title mb-6" id="pageTitle">Détail employé</h1>
+
+<div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <p class="mt-2">Chargement...</p>
+</div>
+
+<div id="employeeContent" class="hidden">
+    <!-- Info de base -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h2 class="card-title">👤 Informations</h2>
+        </div>
+        <div class="card-body">
+            <div id="basicInfo" class="grid-2"></div>
+        </div>
+    </div>
+
+    <!-- Compétences -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h2 class="card-title">🎯 Compétences</h2>
+        </div>
+        <div class="card-body">
+            <div id="skillsList"></div>
+        </div>
+    </div>
+
+    <!-- Formations -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h2 class="card-title">🎓 Formations</h2>
+        </div>
+        <div class="card-body">
+            <div id="trainingList"></div>
+        </div>
+    </div>
+
+    <!-- Performance -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h2 class="card-title">⭐ Évaluations</h2>
+        </div>
+        <div class="card-body">
+            <div id="performanceList"></div>
+        </div>
+    </div>
+
+    <!-- Équipe -->
+    <div class="card" id="teamSection">
+        <div class="card-header">
+            <h2 class="card-title">👥 Équipe</h2>
+        </div>
+        <div class="card-body">
+            <div id="teamList"></div>
+        </div>
+    </div>
+</div>
+
+<div id="errorMessage" class="hidden text-center">
+    <span class="badge badge-error">Employé non trouvé</span>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const employeeId = {{ employee_id }};
+
+async function loadEmployeeDetail() {
+    try {
+        const data = await SirhAPI.getEmployee(employeeId);
+        displayEmployeeInfo(data);
+    } catch (error) {
+        Utils.hide('loading');
+        Utils.show('errorMessage');
+    }
+}
+
+function displayEmployeeInfo(data) {
+    const employee = data.employee;
+    
+    // Titre
+    document.getElementById('pageTitle').textContent = `${employee.first_name} ${employee.last_name}`;
+
+    // Info de base
+    document.getElementById('basicInfo').innerHTML = `
+        <div>
+            <div class="form-label">Nom complet</div>
+            <div>${employee.first_name} ${employee.last_name}</div>
+        </div>
+        <div>
+            <div class="form-label">Email</div>
+            <div>${employee.email}</div>
+        </div>
+        <div>
+            <div class="form-label">Poste</div>
+            <div>${employee.position || 'Non défini'}</div>
+        </div>
+        <div>
+            <div class="form-label">Département</div>
+            <div>${employee.department || 'Non défini'}</div>
+        </div>
+        <div>
+            <div class="form-label">Embauche</div>
+            <div>${Utils.formatDate(employee.hire_date)}</div>
+        </div>
+        <div>
+            <div class="form-label">Manager</div>
+            <div>${employee.manager_name || 'Aucun'}</div>
+        </div>
+    `;
+
+    // Compétences
+    if (data.skills.length > 0) {
+        const skillsHtml = data.skills.map(skill => 
+            `<span class="${Utils.getSkillLevelClass(skill.level)}">${skill.name} (${skill.level})</span>`
+        ).join(' ');
+        document.getElementById('skillsList').innerHTML = skillsHtml;
+    } else {
+        Utils.showEmpty('skillsList', 'Aucune compétence');
+    }
+
+    // Formations
+    if (data.training.length > 0) {
+        const trainingHtml = data.training.map(training => `
+            <div style="border-left: 4px solid var(--primary); padding-left: 1rem; margin-bottom: 1rem;">
+                <div style="font-weight: 500;">${training.name}</div>
+                <div style="font-size: 0.875rem; color: var(--gray-500);">
+                    ${Utils.formatDate(training.completion_date)}
+                    ${training.score ? ` | Score: ${training.score}/100` : ''}
+                    ${training.satisfaction_rating ? ` | Satisfaction: ${training.satisfaction_rating}/5` : ''}
+                </div>
+            </div>
+        `).join('');
+        document.getElementById('trainingList').innerHTML = trainingHtml;
+    } else {
+        Utils.showEmpty('trainingList', 'Aucune formation');
+    }
+
+    // Performance
+    if (data.performance.length > 0) {
+        const perfHtml = data.performance.map(perf => `
+            <div style="border: 1px solid var(--gray-100); border-radius: 0.375rem; padding: 1rem; margin-bottom: 1rem;">
+                <div class="flex-between mb-2">
+                    <span style="font-weight: 500;">Année ${perf.evaluation_year}</span>
+                    <span class="${Utils.getScoreClass(perf.score)}">${perf.score}/5</span>
+                </div>
+                ${perf.comments ? `<p style="font-size: 0.875rem; color: var(--gray-500);">${perf.comments}</p>` : ''}
+            </div>
+        `).join('');
+        document.getElementById('performanceList').innerHTML = perfHtml;
+    } else {
+        Utils.showEmpty('performanceList', 'Aucune évaluation');
+    }
+
+    // Équipe
+    if (data.team.length > 0) {
+        const teamHtml = data.team.map(member => `
+            <div class="flex-between" style="padding: 0.75rem; background: var(--gray-50); border-radius: 0.375rem; margin-bottom: 0.5rem;">
+                <div>
+                    <div style="font-weight: 500;">${member.first_name} ${member.last_name}</div>
+                    <div style="font-size: 0.875rem; color: var(--gray-500);">${member.email}</div>
+                </div>
+                <a href="/employee/${member.id}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Voir</a>
+            </div>
+        `).join('');
+        document.getElementById('teamList').innerHTML = teamHtml;
+    } else {
+        Utils.hide('teamSection');
+    }
+
+    Utils.hide('loading');
+    Utils.show('employeeContent');
+}
+
+loadEmployeeDetail();
+</script>
+{% endblock %}

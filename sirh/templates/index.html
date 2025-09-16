@@ -1,0 +1,113 @@
+<!-- sirh/templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-value">-</div>
+        <div class="stat-label">Employés</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">-</div>
+        <div class="stat-label">Départements</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">-</div>
+        <div class="stat-label">Compétences</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">-</div>
+        <div class="stat-label">Formations</div>
+    </div>
+</div>
+
+<!-- Recherche -->
+<div class="card mb-6">
+    <div class="card-body">
+        <div class="flex-gap">
+            <input type="text" id="searchInput" class="form-input" placeholder="Rechercher...">
+            <button onclick="GlobalSearch.performSearch(document.getElementById('searchInput').value, 'searchResults')" class="btn btn-primary">Rechercher</button>
+        </div>
+        <div id="searchResults" class="hidden mt-4"></div>
+    </div>
+</div>
+
+<!-- Sections -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">👥 Employés</h2>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">Consulter la liste des employés</p>
+            <a href="/employees" class="btn btn-primary">Voir les employés</a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🏛️ Départements</h2>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">Organisation par départements</p>
+            <a href="/departments" class="btn btn-primary">Voir les départements</a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🎯 Compétences</h2>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">Référentiel des compétences</p>
+            <a href="/skills" class="btn btn-primary">Voir les compétences</a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🎓 Formations</h2>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">Programmes de formation</p>
+            <a href="/training" class="btn btn-primary">Voir les formations</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadStats() {
+    try {
+        const stats = await SirhAPI.getStats();
+        const grid = document.getElementById('statsGrid');
+        grid.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${Utils.formatNumber(stats.employees)}</div>
+                <div class="stat-label">Employés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${Utils.formatNumber(stats.departments)}</div>
+                <div class="stat-label">Départements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${Utils.formatNumber(stats.skills)}</div>
+                <div class="stat-label">Compétences</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${Utils.formatNumber(stats.training_programs)}</div>
+                <div class="stat-label">Formations</div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erreur stats:', error);
+    }
+}
+
+GlobalSearch.init('searchInput', 'searchResults');
+loadStats();
+</script>
+{% endblock %}
+

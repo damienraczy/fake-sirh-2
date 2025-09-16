@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any
 
+import os
+
 @dataclass
 class RAGConfig:
     """Configuration pour le système RAG SIRH"""

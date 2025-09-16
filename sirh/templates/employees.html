@@ -1,0 +1,77 @@
+<!-- sirh/templates/employees.html -->
+{% extends "base.html" %}
+
+{% block title %}Employés - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-6">
+    <h1 class="card-title">👥 Employés</h1>
+    <div>Total : <span id="totalCount">-</span></div>
+</div>
+
+<!-- Recherche -->
+<div class="card mb-6">
+    <div class="card-body">
+        <div class="flex-gap">
+            <input type="text" id="searchInput" class="form-input" placeholder="Rechercher par nom ou email...">
+            <button onclick="loadEmployees()" class="btn btn-primary">Rechercher</button>
+            <button onclick="clearSearch()" class="btn btn-secondary">Effacer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Liste -->
+<div class="card">
+    <div id="employeesList"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let employees = [];
+
+async function loadEmployees() {
+    const search = document.getElementById('searchInput').value.trim();
+    Utils.showLoading('employeesList');
+    
+    try {
+        employees = await SirhAPI.getEmployees(search);
+        displayEmployees();
+    } catch (error) {
+        Utils.showError('employeesList');
+    }
+}
+
+function displayEmployees() {
+    document.getElementById('totalCount').textContent = Utils.formatNumber(employees.length);
+    
+    const columns = [
+        { key: 'first_name', label: 'Prénom' },
+        { key: 'last_name', label: 'Nom' },
+        { key: 'email', label: 'Email' },
+        { key: 'position', label: 'Poste' },
+        { key: 'department', label: 'Département' },
+        { key: 'hire_date', label: 'Embauche', type: 'date' },
+        { 
+            key: 'id', 
+            label: 'Actions', 
+            render: (id) => `<a href="/employee/${id}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Voir</a>`
+        }
+    ];
+    
+    TableManager.create('employeesList', employees, columns);
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    loadEmployees();
+}
+
+document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') loadEmployees();
+});
+
+loadEmployees();
+</script>
+{% endblock %}
+

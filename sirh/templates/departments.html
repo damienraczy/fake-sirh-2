@@ -1,0 +1,62 @@
+<!-- sirh/templates/departments.html -->
+{% extends "base.html" %}
+
+{% block title %}Départements - {{ config.company_name }}{% endblock %}
+
+{% block content %}
+<h1 class="card-title mb-6">🏛️ Départements</h1>
+
+<div class="card">
+    <div id="departmentsList"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDepartments() {
+    Utils.showLoading('departmentsList');
+    
+    try {
+        const departments = await SirhAPI.getDepartments();
+        
+        const columns = [
+            { key: 'name', label: 'Nom' },
+            { key: 'description', label: 'Description' },
+            { key: 'employee_count', label: 'Employés', render: (count) => Utils.formatNumber(count) },
+            { 
+                key: 'id', 
+                label: 'Actions', 
+                render: (id) => `<button onclick="showDepartmentEmployees(${id})" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Voir employés</button>`
+            }
+        ];
+        
+        TableManager.create('departmentsList', departments, columns);
+        
+    } catch (error) {
+        Utils.showError('departmentsList');
+    }
+}
+
+async function showDepartmentEmployees(deptId) {
+    try {
+        const employees = await SirhAPI.getDepartmentEmployees(deptId);
+        
+        if (employees.length === 0) {
+            alert('Aucun employé dans ce département');
+            return;
+        }
+        
+        const employeesList = employees.map(emp => 
+            `• ${emp.first_name} ${emp.last_name} (${emp.title || 'Poste non défini'})`
+        ).join('\n');
+        
+        alert(`Employés du département:\n\n${employeesList}`);
+        
+    } catch (error) {
+        alert('Erreur lors du chargement des employés');
+    }
+}
+
+loadDepartments();
+</script>
+{% endblock %}

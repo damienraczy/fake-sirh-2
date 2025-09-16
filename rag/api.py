@@ -1,5 +1,5 @@
 # =============================================================================
-# rag/api.py - API FastAPI avec templates séparés
+# rag/api.py - API FastAPI avec support de sessions conversationnelles
 # =============================================================================
 
 from fastapi import FastAPI, HTTPException, Depends, Request
@@ -9,8 +9,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Ajouter le répertoire parent au path
@@ -18,7 +18,7 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-from config import load_config, get_config
+from config import get_config, load_config
 from rag.config import RAGConfig
 from rag.chain import SIRHRAGChain
 from rag.sql_retriever import SIRHSQLRetriever
@@ -28,9 +28,9 @@ from rag.sql_retriever import SIRHSQLRetriever
 # =============================================================================
 
 app = FastAPI(
-    title="🏢 SIRH RAG API - Flow Solutions",
-    description="API RAG pour l'interrogation intelligente des données RH",
-    version="1.0.0",
+    title="🏢 SIRH RAG API avec Mémoire",
+    description="API RAG pour l'interrogation intelligente des données RH avec mémoire conversationnelle",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -49,11 +49,12 @@ app.add_middleware(
 )
 
 # =============================================================================
-# Modèles Pydantic (inchangés)
+# Modèles Pydantic mis à jour
 # =============================================================================
 
 class QueryRequest(BaseModel):
     question: str
+    session_id: Optional[str] = None  # Nouveau : ID de session
     context: Optional[str] = None
     include_sources: bool = True
 
@@ -64,7 +65,29 @@ class QueryResponse(BaseModel):
     context_used: bool
     response_time: float
     confidence: Optional[float] = None
+    session_id: str  # Nouveau : ID de session retourné
+    conversation_length: int  # Nouveau : Longueur de la conversation
 
+class ConversationHistoryResponse(BaseModel):
+    session_id: str
+    messages: List[Dict[str, Any]]
+    total_messages: int
+
+class MemoryStatsResponse(BaseModel):
+    total_sessions: int
+    total_messages: int
+    active_sessions_24h: int
+    db_size_mb: float
+    retention_days: int
+
+class SystemStatus(BaseModel):
+    status: str
+    documents_indexed: int
+    system_ready: bool
+    memory_enabled: bool = True  # Nouveau
+    version: str = "2.0.0"
+
+# Modèles existants inchangés
 class EmployeeInfo(BaseModel):
     id: int
     first_name: str
@@ -84,12 +107,6 @@ class PerformanceInfo(BaseModel):
     title: Optional[str] = None
     department: Optional[str] = None
 
-class SystemStatus(BaseModel):
-    status: str
-    documents_indexed: int
-    system_ready: bool
-    version: str = "1.0.0"
-
 # Variables globales
 rag_chain: Optional[SIRHRAGChain] = None
 sql_retriever: Optional[SIRHSQLRetriever] = None
@@ -101,22 +118,22 @@ rag_config: Optional[RAGConfig] = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialisation au démarrage"""
+    """Initialisation au démarrage avec mémoire"""
     global rag_chain, sql_retriever, rag_config
     
     try:
-        print("🚀 Initialisation du système RAG...")
+        print("🚀 Initialisation du système RAG avec mémoire...")
         
-        config_file = os.getenv('FAKE_SIRH_2_CONFIG_FILE')
-        print(f"config_file = {config_file}")
-        load_config(config_file)
+        config_path = os.getenv('FAKE_SIRH_2_CONFIG_FILE')
+        load_config(config_path)
+
         base_config = get_config()
         rag_config = RAGConfig.from_base_config(base_config)
         
         rag_chain = SIRHRAGChain(rag_config)
         sql_retriever = SIRHSQLRetriever(rag_config)
         
-        print("✅ Système RAG initialisé avec succès!")
+        print("✅ Système RAG avec mémoire initialisé avec succès!")
         
     except Exception as e:
         print(f"❌ Erreur lors de l'initialisation: {e}")
@@ -152,7 +169,7 @@ def get_template_config():
     }
 
 # =============================================================================
-# Routes Web (Templates)
+# Routes Web (Templates) - inchangées
 # =============================================================================
 
 @app.get("/", response_class=HTMLResponse)
@@ -174,7 +191,7 @@ async def admin(request: Request):
     )
 
 # =============================================================================
-# Routes API (inchangées)
+# Routes API principales avec mémoire
 # =============================================================================
 
 @app.post("/query", response_model=QueryResponse)
@@ -182,13 +199,13 @@ async def query(
     request: QueryRequest,
     chain: SIRHRAGChain = Depends(get_rag_chain)
 ):
-    """Traite une requête utilisateur et retourne une réponse intelligente"""
+    """Traite une requête utilisateur avec mémoire conversationnelle"""
     import time
     
     start_time = time.time()
     
     try:
-        response = chain.query(request.question)
+        response = chain.query(request.question, session_id=request.session_id)
         response_time = round(time.time() - start_time, 2)
         
         return QueryResponse(
@@ -196,6 +213,8 @@ async def query(
             sources=response.get("sources", []),
             query_type=response.get("query_type", "unknown"),
             context_used=response.get("context_used", False),
+            session_id=response["session_id"],
+            conversation_length=response.get("conversation_length", 0),
             response_time=response_time
         )
         
@@ -204,21 +223,91 @@ async def query(
 
 @app.get("/status", response_model=SystemStatus)
 async def get_status(chain: SIRHRAGChain = Depends(get_rag_chain)):
-    """Retourne le statut du système"""
+    """Retourne le statut du système avec info mémoire"""
     try:
         stats = chain.vectorstore.get_collection_stats()
+        memory_stats = chain.get_memory_stats()
         
         return SystemStatus(
             status="operational",
             documents_indexed=stats.get('count', 0),
-            system_ready=True
+            system_ready=True,
+            memory_enabled=True
         )
     except Exception as e:
         return SystemStatus(
             status="error",
             documents_indexed=0,
-            system_ready=False
+            system_ready=False,
+            memory_enabled=False
         )
+
+# =============================================================================
+# Nouvelles routes pour la gestion de mémoire
+# =============================================================================
+
+@app.get("/conversations/{session_id}", response_model=ConversationHistoryResponse)
+async def get_conversation_history(
+    session_id: str,
+    chain: SIRHRAGChain = Depends(get_rag_chain)
+):
+    """Récupère l'historique d'une conversation"""
+    try:
+        messages = chain.get_conversation_history(session_id)
+        
+        return ConversationHistoryResponse(
+            session_id=session_id,
+            messages=messages,
+            total_messages=len(messages)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@app.get("/conversations/search/{query}")
+async def search_conversations(
+    query: str,
+    limit: int = 10,
+    chain: SIRHRAGChain = Depends(get_rag_chain)
+):
+    """Recherche dans l'historique des conversations"""
+    try:
+        results = chain.search_conversations(query)
+        return {"query": query, "results": results[:limit]}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@app.get("/memory/stats", response_model=MemoryStatsResponse)
+async def get_memory_stats(chain: SIRHRAGChain = Depends(get_rag_chain)):
+    """Statistiques de la mémoire conversationnelle"""
+    try:
+        stats = chain.get_memory_stats()
+        
+        return MemoryStatsResponse(
+            total_sessions=stats['total_sessions'],
+            total_messages=stats['total_messages'],
+            active_sessions_24h=stats['active_sessions_24h'],
+            db_size_mb=round(stats['db_size_bytes'] / 1024 / 1024, 2),
+            retention_days=stats['retention_days']
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@app.post("/memory/cleanup")
+async def cleanup_memory(chain: SIRHRAGChain = Depends(get_rag_chain)):
+    """Nettoie les anciennes conversations"""
+    try:
+        chain.cleanup_memory()
+        return {"message": "Nettoyage de la mémoire effectué", "status": "success"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+# =============================================================================
+# Routes API existantes (inchangées)
+# =============================================================================
 
 @app.get("/departments", response_model=List[DepartmentStats])
 async def get_departments(retriever: SIRHSQLRetriever = Depends(get_sql_retriever)):
@@ -322,7 +411,15 @@ async def reindex_documents(chain: SIRHRAGChain = Depends(get_rag_chain)):
 @app.get("/health")
 async def health_check():
     """Vérification de santé de l'API"""
-    return {"status": "healthy", "timestamp": "2025-01-15T10:30:00Z"}
+    return {"status": "healthy", "timestamp": "2025-01-15T10:30:00Z", "memory_enabled": True}
+
+@app.get("/system/info")
+async def get_system_info(chain: SIRHRAGChain = Depends(get_rag_chain)):
+    """Informations complètes du système"""
+    try:
+        return chain.get_system_info()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

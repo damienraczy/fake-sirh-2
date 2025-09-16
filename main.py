@@ -70,6 +70,9 @@ def main():
                 print(f"[RAZ] {path} supprimé")
 
     print("🏢 Générateur SIRH + RAG FastAPI")
+
+    os.environ['FAKE_SIRH_2_CONFIG_FILE'] = args.yaml
+
     load_config(config_path=args.yaml)
 
     steps = {
