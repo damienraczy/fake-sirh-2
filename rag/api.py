@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import sys
+import os
 from pathlib import Path
 
 # Ajouter le répertoire parent au path
@@ -17,7 +18,7 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-from config import get_config
+from config import load_config, get_config
 from rag.config import RAGConfig
 from rag.chain import SIRHRAGChain
 from rag.sql_retriever import SIRHSQLRetriever
@@ -106,6 +107,9 @@ async def startup_event():
     try:
         print("🚀 Initialisation du système RAG...")
         
+        config_file = os.getenv('FAKE_SIRH_2_CONFIG_FILE')
+        print(f"config_file = {config_file}")
+        load_config(config_file)
         base_config = get_config()
         rag_config = RAGConfig.from_base_config(base_config)
         

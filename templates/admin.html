@@ -1,21 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Admin - {{ config.company_name }}{% endblock %}
+{% block title %}Administration - {{ config.company_name }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header Admin -->
-    <div class="bg-gradient-to-r from-purple-800 to-indigo-600 text-white p-8 rounded-lg shadow-lg mb-8">
-        <h1 class="text-4xl font-bold mb-2">⚙️ Administration SIRH</h1>
-        <h2 class="text-2xl mb-4">{{ config.company_name }}</h2>
-        <p class="text-lg opacity-90">Gestion et monitoring du système RAG</p>
-        <a href="/" class="inline-block mt-4 px-4 py-2 bg-white text-purple-800 rounded hover:bg-gray-100">
-            ← Retour au chat
-        </a>
-    </div>
+<div class="container admin-layout">
+    <!-- Header -->
+    <header class="admin-header">
+        <h1>⚙️ Administration RAG</h1>
+        <a href="/" class="back-link">← Retour au chat</a>
+    </header>
 
-    <!-- Contenu admin (reste identique) -->
-    <!-- ... -->
+    <!-- Admin Content -->
+    <main class="admin-content">
+        <!-- System Status -->
+        <section class="admin-section">
+            <h2>Statut Système</h2>
+            <div id="systemStatus" class="status-grid">
+                <div class="loading">Chargement...</div>
+            </div>
+        </section>
+
+        <!-- Database Stats -->
+        <section class="admin-section">
+            <h2>Base de Données</h2>
+            <div id="dbStats" class="stats-grid">
+                <div class="loading">Chargement...</div>
+            </div>
+        </section>
+
+        <!-- RAG Stats -->
+        <section class="admin-section">
+            <h2>Documents RAG</h2>
+            <div id="ragStats" class="stats-grid">
+                <div class="loading">Chargement...</div>
+            </div>
+            <div class="admin-actions">
+                <button id="reindexButton" class="action-button">
+                    🔄 Réindexer les documents
+                </button>
+            </div>
+        </section>
+    </main>
 </div>
 {% endblock %}
 

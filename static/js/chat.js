@@ -1,174 +1,283 @@
-// =============================================================================
-// static/js/chat.js - Gestionnaire de chat principal
-// =============================================================================
+/* =============================================================================
+   RAG SIRH - Logique du chat
+   ============================================================================= */
 
-const ChatManager = {
-    messageCount: 0,
-    isLoading: false,
-    converter: null,
+class ChatManager {
+    constructor() {
+        this.messagesContainer = null;
+        this.inputField = null;
+        this.sendButton = null;
+        this.messageCount = 0;
+        
+        this.init();
+    }
 
     init() {
-        document.addEventListener('DOMContentLoaded', () => {
-            this.converter = new showdown.Converter();
-            this.loadStats();
-            this.setupEventListeners();
-        });
-    },
+        // Attendre que le DOM soit prêt
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setupElements());
+        } else {
+            this.setupElements();
+        }
+    }
+
+    setupElements() {
+        // Récupérer les éléments DOM
+        this.messagesContainer = document.getElementById('messages');
+        this.inputField = document.getElementById('userInput');
+        this.sendButton = document.getElementById('sendButton');
+
+        if (!this.messagesContainer || !this.inputField || !this.sendButton) {
+            console.error('Éléments de chat manquants dans le DOM');
+            return;
+        }
+
+        // Configurer les événements
+        this.setupEventListeners();
+        
+        // Charger les statistiques
+        this.loadStats();
+    }
 
     setupEventListeners() {
-        const input = document.getElementById('userInput');
-        if (input) {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !this.isLoading) {
-                    this.sendMessage();
+        // Envoi par Enter
+        this.inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !AppState.isLoading) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // Envoi par bouton
+        this.sendButton.addEventListener('click', () => {
+            if (!AppState.isLoading) {
+                this.sendMessage();
+            }
+        });
+
+        // Boutons d'exemples
+        document.querySelectorAll('.example-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const question = button.getAttribute('data-question');
+                if (question) {
+                    this.askQuestion(question);
                 }
             });
-        }
-    },
+        });
+
+        // Écouter les changements d'état de chargement
+        document.addEventListener('loadingChanged', (e) => {
+            this.updateLoadingState(e.detail.loading);
+        });
+    }
 
     async sendMessage() {
-        const input = document.getElementById('userInput');
-        const question = input.value.trim();
-        
-        if (!question || this.isLoading) return;
-        
-        this.isLoading = true;
-        
+        const question = this.inputField.value.trim();
+        if (!question) return;
+
         // Afficher le message utilisateur
         this.addMessage('user', question);
-        input.value = '';
-        
-        // Afficher le loading
-        this.showLoading(true);
-        
+        this.inputField.value = '';
+
+        // Démarrer le chargement
+        AppState.setLoading(true);
+
         try {
-            const response = await axios.post('/query', {
-                question: question,
-                include_sources: true
-            });
+            // Appeler l'API RAG
+            const response = await ApiClient.query(question);
             
             // Afficher la réponse
-            this.addMessage('assistant', response.data.answer, response.data);
+            this.addMessage('assistant', response.answer, response);
             
+            // Sauvegarder la dernière requête
+            AppState.lastQuery = { question, response };
+
         } catch (error) {
-            console.error('Erreur requête:', error);
-            this.addMessage('assistant', 
-                `Désolé, une erreur s'est produite: ${error.response?.data?.detail || error.message}`
-            );
+            console.error('Erreur lors de la requête:', error);
+            
+            let errorMessage = 'Une erreur est survenue lors du traitement de votre question.';
+            if (error.response?.data?.detail) {
+                errorMessage = `Erreur: ${error.response.data.detail}`;
+            } else if (error.message) {
+                errorMessage = `Erreur: ${error.message}`;
+            }
+            
+            this.addMessage('assistant', errorMessage);
+            Utils.showNotification('Erreur lors de la requête', 'error');
         } finally {
-            this.showLoading(false);
-            this.isLoading = false;
+            AppState.setLoading(false);
         }
-    },
+    }
 
     addMessage(role, content, metadata = null) {
-        const messagesDiv = document.getElementById('messages');
-        
-        // Supprimer le message de bienvenue
+        // Supprimer le message de bienvenue lors du premier message
         if (this.messageCount === 0) {
-            messagesDiv.innerHTML = '';
+            const welcomeMsg = this.messagesContainer.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
         }
-        
+
+        // Créer le conteneur du message
         const messageDiv = document.createElement('div');
-        messageDiv.className = `mb-4 ${role === 'user' ? 'text-right' : 'text-left'} chat-message`;
-        
-        let metadataHtml = '';
+        messageDiv.className = `message ${role}`;
+
+        // Créer la bulle de message
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble';
+
+        // Traitement du contenu selon le rôle
+        if (role === 'assistant') {
+            // Rendre le markdown pour les réponses de l'assistant
+            bubbleDiv.innerHTML = Utils.renderMarkdown(content);
+            bubbleDiv.classList.add('markdown-content');
+        } else {
+            // Texte simple pour les messages utilisateur
+            bubbleDiv.textContent = content;
+        }
+
+        messageDiv.appendChild(bubbleDiv);
+
+        // Ajouter les métadonnées si disponibles
         if (metadata && role === 'assistant') {
-            metadataHtml = `
-                <div class="mt-2 text-xs text-gray-500">
-                    <span class="bg-gray-200 px-2 py-1 rounded mr-2">📊 ${metadata.query_type}</span>
-                    <span class="bg-gray-200 px-2 py-1 rounded mr-2">📚 ${metadata.sources.length} sources</span>
-                    <span class="bg-gray-200 px-2 py-1 rounded">⏱️ ${metadata.response_time}s</span>
-                </div>
-            `;
+            const metaDiv = this.createMetadataElement(metadata);
+            messageDiv.appendChild(metaDiv);
         }
-        
-        const contentHtml = role === 'assistant' ? this.converter.makeHtml(content) : this.escapeHtml(content);
 
-        messageDiv.innerHTML = `
-            <div class="inline-block max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                role === 'user' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-white border border-gray-200'
-            }">
-                ${contentHtml}
-                ${metadataHtml}
-            </div>
-        `;
+        // Ajouter au conteneur et faire défiler
+        this.messagesContainer.appendChild(messageDiv);
+        this.scrollToBottom();
         
-        messagesDiv.appendChild(messageDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
         this.messageCount++;
-    },
+    }
 
-    showLoading(show) {
-        const loading = document.getElementById('loading');
-        if (loading) {
-            loading.classList.toggle('hidden', !show);
-        }
-    },
+    createMetadataElement(metadata) {
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'message-metadata';
+        metaDiv.style.cssText = `
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.75rem;
+            color: #64748b;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        `;
 
-    askExample(question) {
-        const input = document.getElementById('userInput');
-        if (input) {
-            input.value = question;
-            this.sendMessage();
+        const items = [];
+        
+        if (metadata.query_type) {
+            items.push(`📊 ${metadata.query_type}`);
         }
-    },
+        
+        if (metadata.sources && metadata.sources.length > 0) {
+            items.push(`📚 ${metadata.sources.length} source(s)`);
+        }
+        
+        if (metadata.response_time) {
+            items.push(`⏱️ ${metadata.response_time}s`);
+        }
+
+        metaDiv.innerHTML = items.map(item => 
+            `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${item}</span>`
+        ).join('');
+
+        return metaDiv;
+    }
+
+    askQuestion(question) {
+        this.inputField.value = question;
+        this.sendMessage();
+    }
+
+    scrollToBottom() {
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    }
+
+    updateLoadingState(isLoading) {
+        // Mettre à jour le bouton d'envoi
+        const sendText = this.sendButton.querySelector('.send-text');
+        const loadingText = this.sendButton.querySelector('.loading-text');
+        
+        if (sendText && loadingText) {
+            Utils.toggle(sendText, !isLoading);
+            Utils.toggle(loadingText, isLoading);
+        }
+        
+        // Désactiver/activer les contrôles
+        this.sendButton.disabled = isLoading;
+        this.inputField.disabled = isLoading;
+        
+        // Mettre à jour le placeholder
+        if (isLoading) {
+            this.inputField.placeholder = 'Traitement en cours...';
+        } else {
+            this.inputField.placeholder = 'Tapez votre question...';
+        }
+    }
 
     async loadStats() {
         try {
-            const [statusResponse, deptResponse] = await Promise.all([
-                axios.get('/status'),
-                axios.get('/departments')
+            const [status, departments] = await Promise.all([
+                ApiClient.getStatus(),
+                ApiClient.getDepartments()
             ]);
-            
-            const status = statusResponse.data;
-            const departments = deptResponse.data;
-            
-            const statsDiv = document.getElementById('stats');
-            if (!statsDiv) return;
-            
-            const totalEmployees = departments.reduce((sum, dept) => sum + dept.count, 0);
-            
-            statsDiv.innerHTML = `
-                <div class="text-sm space-y-2">
-                    <div class="flex justify-between">
-                        <span>👥 Employés</span>
-                        <span class="font-medium">${totalEmployees}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>🏛️ Départements</span>
-                        <span class="font-medium">${departments.length}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>📄 Documents</span>
-                        <span class="font-medium">${status.documents_indexed}</span>
-                    </div>
-                    <div class="mt-2 pt-2 border-t">
-                        <span class="text-xs text-green-600">✅ Système opérationnel</span>
-                    </div>
-                </div>
-            `;
-            
+
+            const stats = {
+                employees: departments.reduce((sum, dept) => sum + dept.count, 0),
+                departments: departments.length,
+                documents: status.documents_indexed,
+                systemReady: status.system_ready
+            };
+
+            AppState.setStats(stats);
+            this.updateStatsDisplay(stats);
+
         } catch (error) {
-            console.error('Erreur chargement stats:', error);
-            const statsDiv = document.getElementById('stats');
-            if (statsDiv) {
-                statsDiv.innerHTML = '<div class="text-sm text-red-500">Erreur de chargement</div>';
-            }
+            console.error('Erreur lors du chargement des statistiques:', error);
+            this.showStatsError();
         }
-    },
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
-};
 
-// Initialisation
-ChatManager.init();
+    updateStatsDisplay(stats) {
+        const statsContainer = document.getElementById('stats');
+        if (!statsContainer) return;
+
+        statsContainer.innerHTML = `
+            <div class="stat-item">
+                <span class="stat-label">👥 Employés</span>
+                <span class="stat-value">${Utils.formatNumber(stats.employees)}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">🏛️ Départements</span>
+                <span class="stat-value">${stats.departments}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">📄 Documents</span>
+                <span class="stat-value">${Utils.formatNumber(stats.documents)}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">
+                    ${stats.systemReady ? '✅' : '⚠️'} Statut
+                </span>
+                <span class="stat-value ${stats.systemReady ? 'success' : 'error'}">
+                    ${stats.systemReady ? 'OK' : 'Init'}
+                </span>
+            </div>
+        `;
+    }
+
+    showStatsError() {
+        const statsContainer = document.getElementById('stats');
+        if (statsContainer) {
+            statsContainer.innerHTML = '<div class="error">Erreur de chargement</div>';
+        }
+    }
+}
+
+// Initialiser le gestionnaire de chat
+const chatManager = new ChatManager();
 
 // Export global pour compatibilité
-window.ChatManager = ChatManager;
+window.ChatManager = chatManager;

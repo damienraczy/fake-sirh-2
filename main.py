@@ -39,8 +39,11 @@ def run_rag_indexation():
     except Exception as e:
         print(f"❌ Erreur indexation RAG: {e}")
 
-def launch_rag_api(port=8000):
+def launch_rag_api(port, config_file):
     """Lance l'API RAG"""
+    
+    os.environ['FAKE_SIRH_2_CONFIG_FILE'] = config_file
+
     try:
         print(f"🚀 Lancement API RAG sur http://localhost:{port}")
         subprocess.run([sys.executable, "-m", "uvicorn", "rag.api:app", f"--port={port}", "--reload"])
@@ -88,7 +91,7 @@ def main():
 
     if args.start_api:
         print("\n=== LANCEMENT API ===")
-        launch_rag_api(args.port)
+        launch_rag_api(args.port, args.yaml)
 
 if __name__ == "__main__":
     main()

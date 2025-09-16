@@ -1,86 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}{{ config.title }} - {{ config.company_name }}{% endblock %}
+{% block title %}{{ config.company_name }} - RAG SIRH{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container">
     <!-- Header -->
-    <div class="bg-gradient-to-r from-blue-800 to-green-600 text-white p-8 rounded-lg shadow-lg mb-8">
-        <h1 class="text-4xl font-bold mb-2">{{ config.title }}</h1>
-        <h2 class="text-2xl mb-4">{{ config.company_name }} - {{ config.company_sector }}</h2>
-        <p class="text-lg opacity-90">{{ config.subtitle }}</p>
-    </div>
+    <header class="header">
+        <h1>🤖 {{ config.company_name }}</h1>
+        <p>{{ config.company_sector }} - Assistant RH</p>
+    </header>
 
-    <!-- Interface de chat -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <!-- Chat principal -->
-        <div class="lg:col-span-3">
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-xl font-semibold mb-4">💬 Chat RH</h3>
-                
-                <!-- Messages -->
-                <div id="messages" class="h-96 overflow-y-auto mb-4 p-4 bg-gray-50 rounded border">
-                    <div class="text-gray-500 text-center">
-                        Posez votre première question sur les données RH...
-                    </div>
-                </div>
-                
-                <!-- Input -->
-                <div class="flex gap-2">
-                    <input 
-                        type="text" 
-                        id="userInput" 
-                        placeholder="Tapez votre question ici..."
-                        class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onkeypress="if(event.key==='Enter') ChatManager.sendMessage()"
-                    >
-                    <button 
-                        onclick="ChatManager.sendMessage()"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                    >
-                        Envoyer
-                    </button>
-                </div>
-                
-                <!-- Loading indicator -->
-                <div id="loading" class="hidden mt-4 text-center">
-                    <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    <span class="ml-2">Recherche en cours...</span>
-                </div>
+    <!-- Main Chat Interface -->
+    <main class="chat-container">
+        <div class="chat-messages" id="messages">
+            <div class="welcome-message">
+                <p>Bonjour ! Posez vos questions sur les données RH de {{ config.company_name }}.</p>
             </div>
         </div>
         
-        <!-- Sidebar -->
-        <div class="lg:col-span-1">
-            <!-- Exemples -->
-            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <h3 class="text-lg font-semibold mb-4">💡 Exemples</h3>
-                <div class="space-y-2">
-                    {% for example in config.examples %}
-                    <button onclick="ChatManager.askExample('{{ example|e }}')" 
-                            class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded transition text-sm">
-                        {{ example }}
-                    </button>
-                    {% endfor %}
-                </div>
-            </div>
-            
-            <!-- Statistiques -->
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold mb-4">📊 Statistiques</h3>
-                <div id="stats" class="space-y-2">
-                    <div class="text-sm text-gray-500">Chargement...</div>
-                </div>
-            </div>
-            
-            <!-- Lien admin -->
-            <div class="mt-6">
-                <a href="/admin" class="block text-center p-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition">
-                    ⚙️ Administration
-                </a>
+        <div class="chat-input-container">
+            <input 
+                type="text" 
+                id="userInput" 
+                class="chat-input"
+                placeholder="Tapez votre question..."
+                autocomplete="off"
+            >
+            <button id="sendButton" class="send-button">
+                <span class="send-text">Envoyer</span>
+                <span class="loading-text hidden">...</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- Sidebar with stats and examples -->
+    <aside class="sidebar">
+        <div class="stats-card">
+            <h3>📊 Statistiques</h3>
+            <div id="stats" class="stats-content">
+                <div class="loading">Chargement...</div>
             </div>
         </div>
-    </div>
+        
+        <div class="examples-card">
+            <h3>💡 Exemples</h3>
+            <div class="examples-list">
+                {% for example in config.examples %}
+                <button class="example-button" data-question="{{ example }}">
+                    {{ example }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+    </aside>
 </div>
 {% endblock %}
 
