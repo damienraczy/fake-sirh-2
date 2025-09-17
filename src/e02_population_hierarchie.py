@@ -1,8 +1,5 @@
-# =============================================================================
-# src/e02_population_hierarchie.py (version complète)
-# =============================================================================
-
-from database import get_connection
+# src/e02_population_hierarchie.py (version corrigée)
+from database import get_connection, close_connection
 from llm_client import generate_json, LLMError
 from config import get_config
 from utils.names_generator import NamesGenerator
@@ -25,72 +22,71 @@ def run():
     domaine_email = company_profile['technique']['domaine_email']
     
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Récupérer les unités et positions existantes
-    cursor.execute("SELECT id, name FROM organizational_unit")
-    units = cursor.fetchall()
-    
-    cursor.execute("SELECT id, title FROM position")
-    positions = cursor.fetchall()
-    
-    if not units or not positions:
-        print("Erreur: Aucune unité ou position trouvée. Exécutez d'abord l'étape 1.")
-        return
-    
-    # Lire le prompt pour la génération d'employés
-    with open('prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
-        prompt_template = f.read()
-    
-    def create_employee_with_local_name(position_title: str, unit_name: str, is_manager: bool = False, manager_id=None):
-        """Crée un employé avec nom local et données LLM"""
-        
-        # Déterminer le genre selon le ratio
-        is_male = random.random() < ratio_hommes
-        
-        # Générer nom unique
-        prenom, nom, email_base = names_gen.generate_unique_name(is_male)
-        email = f"{email_base}@{domaine_email}"
-        
-        # Générer les données contextuelles via LLM
-        context_prompt = prompt_template.format(
-            position=position_title,
-            unit=unit_name,
-            sector=company_profile['secteur'],
-            culture=company_profile['culture'],
-            avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
-            count=1,
-            first_name=prenom,
-            last_name=nom,
-            email=email
-        )
-        
-        # Tentative avec LLM (avec retry automatique)
-        try:
-            employee_data = generate_json(context_prompt)
-            
-            if 'employees' in employee_data and len(employee_data['employees']) > 0:
-                employee_info = employee_data['employees'][0]
-                hire_date = employee_info.get('hire_date', 
-                    (datetime.now() - timedelta(days=random.randint(30, 1000))).strftime('%Y-%m-%d'))
-                print(f"✓ Contexte LLM généré pour {prenom} {nom}")
-            else:
-                raise Exception("Structure JSON invalide")
-                
-        except (LLMError, Exception) as e:
-            print(f"⚠ Fallback pour {prenom} {nom}: {e}")
-            # Fallback avec données par défaut
-            hire_date = (datetime.now() - timedelta(days=random.randint(30, 1000))).strftime('%Y-%m-%d')
-        
-        # Insérer en base
-        cursor.execute("""
-            INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
-            VALUES (?, ?, ?, ?, ?)
-        """, (prenom, nom, email, hire_date, manager_id))
-        
-        return cursor.lastrowid, prenom, nom
     
     try:
+        cursor = conn.cursor()
+        
+        # Récupérer les unités et positions existantes
+        cursor.execute("SELECT id, name FROM organizational_unit")
+        units = cursor.fetchall()
+        
+        cursor.execute("SELECT id, title FROM position")
+        positions = cursor.fetchall()
+        
+        if not units or not positions:
+            print("Erreur: Aucune unité ou position trouvée. Exécutez d'abord l'étape 1.")
+            return
+        
+        print(f"Trouvé {len(units)} unités et {len(positions)} positions")
+        
+        # Lire le prompt pour la génération d'employés
+        with open('prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
+            prompt_template = f.read()
+        
+        def create_employee_with_local_name(position_title: str, unit_name: str, is_manager: bool = False, manager_id=None):
+            """Crée un employé avec nom local et données LLM"""
+            
+            # Déterminer le genre selon le ratio
+            is_male = random.random() < ratio_hommes
+            
+            # Générer nom unique
+            prenom, nom, email_base = names_gen.generate_unique_name(is_male)
+            email = f"{email_base}@{domaine_email}"
+            
+            # Générer les données contextuelles via LLM (avec fallback)
+            hire_date = (datetime.now() - timedelta(days=random.randint(30, 1000))).strftime('%Y-%m-%d')
+            
+            try:
+                context_prompt = prompt_template.format(
+                    position=position_title,
+                    unit=unit_name,
+                    sector=company_profile['secteur'],
+                    culture=company_profile['culture'],
+                    avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
+                    first_name=prenom,
+                    last_name=nom,
+                    email=email
+                )
+                
+                employee_data = generate_json(context_prompt, max_retries=3)
+                
+                if 'employees' in employee_data and len(employee_data['employees']) > 0:
+                    employee_info = employee_data['employees'][0]
+                    hire_date = employee_info.get('hire_date', hire_date)
+                    print(f"✓ Contexte LLM généré pour {prenom} {nom}")
+                    
+            except (LLMError, Exception) as e:
+                print(f"⚠ Fallback pour {prenom} {nom}: {e}")
+                # Utiliser les données par défaut déjà générées
+            
+            # Insérer en base
+            cursor.execute("""
+                INSERT INTO employee (first_name, last_name, email, hire_date, manager_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (prenom, nom, email, hire_date, manager_id))
+            
+            return cursor.lastrowid, prenom, nom
+        
         # Générer le directeur général d'abord
         print("Génération du directeur général...")
         
@@ -99,7 +95,6 @@ def run():
                            for word in ['CEO', 'DIRECTOR', 'GENERAL', 'CHIEF'])), None)
         
         if not ceo_position:
-            # Fallback: prendre la première position
             ceo_position = positions[0]
             print(f"Aucune position de direction trouvée, utilisation de: {ceo_position['title']}")
         
@@ -117,7 +112,6 @@ def run():
                            for word in ['MANAGER', 'HEAD', 'LEAD', 'SUPERVISOR'])]
         
         if not manager_positions:
-            # Fallback: utiliser des positions génériques
             manager_positions = [p for p in positions if p['id'] != ceo_position['id']][:5]
         
         units_with_managers = [u for u in units if u['name'] not in ["Direction Générale", "Executive"]]
@@ -152,25 +146,21 @@ def run():
         remaining_employees = max(0, total_target - current_count)
         
         if remaining_employees > 0:
-            # Répartir les employés entre les unités qui ont des managers
             employees_per_unit = max(1, remaining_employees // len(managers)) if managers else 0
             
             print(f"Génération de {remaining_employees} employés restants...")
             
             for unit in units_with_managers:
                 if unit['id'] in managers:
-                    # Positions pour les employés (pas de managers)
                     unit_positions = [p for p in positions 
                                     if not any(word in p['title'].upper() 
                                              for word in ['MANAGER', 'DIRECTOR', 'CEO', 'HEAD', 'CHIEF'])]
                     
                     if not unit_positions:
-                        # Fallback: utiliser toutes les positions sauf celle du DG
                         unit_positions = [p for p in positions if p['id'] != ceo_position['id']]
                     
                     manager_id = managers[unit['id']]
                     
-                    # Créer les employés pour cette unité
                     employees_for_this_unit = min(employees_per_unit, remaining_employees)
                     
                     for i in range(employees_for_this_unit):
@@ -216,38 +206,13 @@ def run():
         cursor.execute("SELECT COUNT(*) FROM employee")
         total_employees = cursor.fetchone()[0]
         
-        cursor.execute("""
-            SELECT COUNT(*) FROM employee e 
-            JOIN assignment a ON e.id = a.employee_id 
-            WHERE a.end_date IS NULL
-        """)
-        assigned_employees = cursor.fetchone()[0]
-        
-        cursor.execute("""
-            SELECT COUNT(*) FROM employee 
-            WHERE manager_id IS NULL
-        """)
-        ceo_count = cursor.fetchone()[0]
-        
         print(f"\n=== STATISTIQUES ===")
         print(f"✓ {total_employees} employés créés au total")
-        print(f"✓ {assigned_employees} employés avec affectations actives")
-        print(f"✓ {ceo_count} directeur général (manager_id = NULL)")
-        print(f"✓ {len(managers)} managers de département")
-        print(f"✓ Ratio hommes/femmes appliqué: {ratio_hommes*100:.0f}%/{(1-ratio_hommes)*100:.0f}%")
         print(f"✓ Domaine email: @{domaine_email}")
-        
-        # Vérification hiérarchique
-        cursor.execute("""
-            SELECT COUNT(*) FROM employee 
-            WHERE manager_id IS NOT NULL
-        """)
-        employees_with_manager = cursor.fetchone()[0]
-        print(f"✓ {employees_with_manager} employés avec un manager")
         
     except Exception as e:
         print(f"Erreur lors de la génération: {e}")
         conn.rollback()
         raise
     finally:
-        conn.close()
+        close_connection(conn)

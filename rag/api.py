@@ -36,8 +36,8 @@ app = FastAPI(
 )
 
 # Configuration des templates et fichiers statiques
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="rag/templates")
+app.mount("/static", StaticFiles(directory="rag/static"), name="static")
 
 # Middleware CORS
 app.add_middleware(

@@ -15,6 +15,10 @@ pydantic
 jinja2
 
 
+neo4j
+neo4j-haystack
+haystack-ai
+
 #
 # * **Linter - `pylint` ou `flake8`** :
 #     * **Utilité** : Ils analysent votre code statiquement pour détecter les erreurs, 
