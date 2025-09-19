@@ -1,6 +1,6 @@
 # src/e01_structure_organisationnelle.py (version corrigée)
 import json
-from database import get_connection, close_connection
+from utils.database import get_connection, close_connection
 from llm_client import generate_json, LLMError
 from config import get_config
 

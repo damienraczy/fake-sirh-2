@@ -1,0 +1,17 @@
+# Configuration de connexion Neo4j
+neo4j:
+  uri: "neo4j://localhost:7687"
+  user: "neo4j"
+  password_file: "~/.neo4j_password"  # Fichier contenant le mot de passe
+  database: "sirh"
+  pool_config:
+    max_connection_lifetime: 300
+    max_connection_pool_size: 50
+    connection_acquisition_timeout: 60
+
+# Configuration de performance
+performance:
+  batch_size: 1000
+  parallel_workers: 4
+  transaction_timeout: 300
+  memory_limit: "1G"

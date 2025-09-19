@@ -21,6 +21,29 @@ from src import e05_formations_developpement as etape5
 from src import e06_feedback_documents as etape6
 from utils.validation import validate_database
 
+def run_graph_sync():
+    """Étape 9: Synchronisation vers Neo4j"""
+    print("\n=== ÉTAPE 9: Synchronisation Neo4j ===")
+    
+    try:
+        from rdb2graph.core.sync_manager import SyncManager
+        
+        # Récupérer le chemin de la base SQLite depuis la config
+        config = get_config()
+        db_path = f"{config['entreprise']['base_de_données']['chemin']}/{config['entreprise']['base_de_données']['nom']}"
+        
+        # Synchronisation
+        sync_manager = SyncManager()
+        sync_manager.sync_full_replace(db_path)
+        
+        print("✅ Synchronisation Neo4j terminée")
+        
+    except ImportError:
+        print("⚠️ Module rdb2graph non disponible. Installez les dépendances Neo4j.")
+    except Exception as e:
+        print(f"❌ Erreur synchronisation Neo4j: {e}")
+
+
 def run_rag_indexation():
     """Étape 7: Indexation RAG"""
     print("Étape 7: Indexation RAG des données")
@@ -77,9 +100,14 @@ def main():
 
     steps = {
         '0': lambda: etape0.run(schema_path=args.sql, ),
-        '1': etape1.run, '2': etape2.run, '3': etape3.run,
-        '4': etape4.run, '5': etape5.run, '6': etape6.run,
-        '7': run_rag_indexation
+        '1': etape1.run,
+        '2': etape2.run,
+        '3': etape3.run,
+        '4': etape4.run,
+        '5': etape5.run,
+        '6': etape6.run,
+        '7': run_rag_indexation,
+        '8': run_graph_sync  # Nouvelle étape
     }
 
     # Exécution des étapes

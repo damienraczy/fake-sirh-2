@@ -1,0 +1,158 @@
+# Configuration du mapping SQLite → Neo4j
+database:
+  sqlite_path: "db/experts_bois.sqlite"  # Sera surchargé par la config globale
+  neo4j_database: "sirh"
+
+# Mapping des entités (tables → nœuds)
+entities:
+  employee:
+    table: "employee"
+    node_label: "Employee"
+    primary_key: "id"
+    properties:
+      - id: {type: "integer", neo4j_property: "employee_id"}
+      - first_name: {type: "string", neo4j_property: "prenom"}
+      - last_name: {type: "string", neo4j_property: "nom"}
+      - email: {type: "string", neo4j_property: "email"}
+      - hire_date: {type: "date", neo4j_property: "date_embauche"}
+    
+  organizational_unit:
+    table: "organizational_unit"
+    node_label: "OrganizationalUnit"
+    primary_key: "id"
+    properties:
+      - id: {type: "integer", neo4j_property: "unit_id"}
+      - name: {type: "string", neo4j_property: "nom"}
+      - description: {type: "string", neo4j_property: "description"}
+  
+  position:
+    table: "position"
+    node_label: "Position"
+    primary_key: "id"
+    properties:
+      - id: {type: "integer", neo4j_property: "position_id"}
+      - title: {type: "string", neo4j_property: "titre"}
+      - description: {type: "string", neo4j_property: "description"}
+  
+  skill:
+    table: "skill"
+    node_label: "Skill"
+    primary_key: "id"
+    properties:
+      - id: {type: "integer", neo4j_property: "skill_id"}
+      - name: {type: "string", neo4j_property: "nom"}
+      - category: {type: "string", neo4j_property: "categorie"}
+  
+  training_program:
+    table: "training_program"
+    node_label: "TrainingProgram"
+    primary_key: "id"
+    properties:
+      - id: {type: "integer", neo4j_property: "program_id"}
+      - name: {type: "string", neo4j_property: "nom"}
+      - description: {type: "string", neo4j_property: "description"}
+      - duration_hours: {type: "integer", neo4j_property: "duree_heures"}
+      - cost: {type: "float", neo4j_property: "cout"}
+      - provider: {type: "string", neo4j_property: "fournisseur"}
+
+# Mapping des relations (FK + tables de liaison → relations)
+relationships:
+  # Relations hiérarchiques directes (FK)
+  manager_relationship:
+    type: "MANAGES"
+    source_entity: "employee"
+    target_entity: "employee"
+    source_key: "manager_id"
+    target_key: "id"
+    direction: "source_to_target"  # manager MANAGES employee
+    properties: {}
+  
+  # Relations via tables de liaison
+  assignment_position:
+    type: "OCCUPIES"
+    source_entity: "employee"
+    target_entity: "position"
+    via_table: "assignment"
+    source_key: "employee_id"
+    target_key: "position_id"
+    condition: "end_date IS NULL"  # Seulement les affectations actives
+    properties:
+      - start_date: {type: "date", neo4j_property: "date_debut"}
+  
+  assignment_unit:
+    type: "WORKS_IN"
+    source_entity: "employee"
+    target_entity: "organizational_unit"
+    via_table: "assignment"
+    source_key: "employee_id"
+    target_key: "unit_id"
+    condition: "end_date IS NULL"
+    properties:
+      - start_date: {type: "date", neo4j_property: "date_debut"}
+  
+  employee_skills:
+    type: "HAS_SKILL"
+    source_entity: "employee"
+    target_entity: "skill"
+    via_table: "employee_skill"
+    source_key: "employee_id"
+    target_key: "skill_id"
+    properties:
+      - level: {type: "string", neo4j_property: "niveau"}
+  
+  training_records:
+    type: "COMPLETED_TRAINING"
+    source_entity: "employee"
+    target_entity: "training_program"
+    via_table: "training_record"
+    source_key: "employee_id"
+    target_key: "training_program_id"
+    properties:
+      - completion_date: {type: "date", neo4j_property: "date_completion"}
+      - score: {type: "integer", neo4j_property: "score"}
+      - satisfaction_rating: {type: "integer", neo4j_property: "satisfaction"}
+  
+  performance_reviews:
+    type: "REVIEWED_BY"
+    source_entity: "employee"
+    target_entity: "employee"
+    via_table: "performance_review"
+    source_key: "employee_id"
+    target_key: "reviewer_id"
+    properties:
+      - evaluation_year: {type: "integer", neo4j_property: "annee_evaluation"}
+      - score: {type: "integer", neo4j_property: "score"}
+      - comments: {type: "string", neo4j_property: "commentaires"}
+  
+  goals_assignment:
+    type: "ASSIGNED_GOAL"
+    source_entity: "employee"
+    target_entity: "employee"
+    via_table: "goal"
+    source_key: "assignee_id"
+    target_key: "assigner_id"
+    properties:
+      - description: {type: "string", neo4j_property: "description"}
+      - evaluation_year: {type: "integer", neo4j_property: "annee"}
+      - status: {type: "string", neo4j_property: "statut"}
+  
+  feedback_relations:
+    type: "GAVE_FEEDBACK"
+    source_entity: "employee"
+    target_entity: "employee"
+    via_table: "feedback"
+    source_key: "from_employee_id"
+    target_key: "to_employee_id"
+    properties:
+      - feedback_type: {type: "string", neo4j_property: "type_feedback"}
+      - content: {type: "string", neo4j_property: "contenu"}
+      - feedback_date: {type: "date", neo4j_property: "date_feedback"}
+      - context: {type: "string", neo4j_property: "contexte"}
+      - is_anonymous: {type: "boolean", neo4j_property: "anonyme"}
+
+# Configuration de la synchronisation
+sync_config:
+  mode: "full_replace"  # ou "incremental"
+  batch_size: 1000
+  enable_parallel: true
+  validation_after_import: true

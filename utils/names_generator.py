@@ -4,6 +4,7 @@
 
 import random
 from typing import Tuple, Set
+from utils.utils import normalize_string
 
 class NamesGenerator:
     """
@@ -81,7 +82,7 @@ class NamesGenerator:
                 self.used_combinations.add(identifiant)
                 
                 # Générer la base email (sera complétée avec le domaine)
-                email_base = f"{prenom.lower().replace('é', 'e').replace('è', 'e').replace('ï', 'i').replace('ç', 'c')}.{nom.lower().replace('-', '')}"
+                email_base = normalize_string(f"{prenom.lower()}.{nom.lower()}")
                 
                 return prenom, nom, email_base
             

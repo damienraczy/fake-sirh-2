@@ -4,7 +4,7 @@ import requests
 import json
 import time
 from dotenv import load_dotenv
-from utils_llm import strip_markdown_fences
+from utils.utils_llm import strip_markdown_fences
 
 # Configuration API
 OLLAMA_API_URL = "https://ollama.com/api/generate"

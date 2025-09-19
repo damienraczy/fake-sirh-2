@@ -19,7 +19,7 @@ parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
 from config import get_config, load_config
-from database import get_connection
+from utils.database import get_connection
 import sqlite3
 
 # =============================================================================

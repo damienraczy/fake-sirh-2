@@ -1,0 +1,33 @@
+# Contraintes et index Neo4j à créer
+constraints:
+  uniqueness:
+    - label: "Employee"
+      property: "employee_id"
+    - label: "OrganizationalUnit"
+      property: "unit_id"
+    - label: "Position"
+      property: "position_id"
+    - label: "Skill"
+      property: "skill_id"
+    - label: "TrainingProgram"
+      property: "program_id"
+
+indexes:
+  single_property:
+    - label: "Employee"
+      property: "email"
+    - label: "Employee"
+      property: "nom"
+    - label: "Skill"
+      property: "nom"
+    - label: "OrganizationalUnit"
+      property: "nom"
+  
+  composite:
+    - label: "Employee"
+      properties: ["prenom", "nom"]
+
+# Contraintes de relation (optionnel)
+relationship_constraints:
+  - type: "MANAGES"
+    constraint: "ASSERT NOT EXISTS( (a)-[:MANAGES*]->(a) )"  # Éviter les cycles

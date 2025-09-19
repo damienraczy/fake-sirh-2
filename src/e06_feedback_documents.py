@@ -3,8 +3,8 @@
 # =============================================================================
 
 import os
-from database import get_connection
-from llm_client import generate_json, LLMError
+from utils.database import get_connection
+from utils.llm_client import generate_json, LLMError
 from config import get_config
 from datetime import datetime, timedelta
 import random

@@ -2,7 +2,7 @@
 # src/e00_initialisation.py
 # =============================================================================
 
-from database import create_database
+from utils.database import create_database
 
 def run(schema_path):
     """
