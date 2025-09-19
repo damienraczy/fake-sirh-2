@@ -16,7 +16,7 @@ class LLMError(Exception):
     """Exception levée quand le LLM échoue après tous les retries"""
     pass
 
-def generate_text(prompt: str, max_tokens: int = 2000):
+def generate_text(prompt: str, max_tokens: int = 16000):
     """
     Envoie un prompt au LLM via l'API Ollama et retourne le texte généré.
     """
@@ -61,20 +61,16 @@ def generate_text(prompt: str, max_tokens: int = 2000):
         print(f"Erreur: Impossible de décoder la réponse JSON du LLM. Réponse brute: {response.text}")
         return "Erreur de format de réponse du LLM."
 
-def generate_json(prompt: str, max_retries: int = 5, delay: float = 2.0, max_tokens: int = 3000):
+def generate_json(prompt: str, max_retries: int = 5, delay: float = 0.5, max_tokens: int = 16000):
     """
     Génère du JSON valide via LLM avec retry automatique renforcé.
     """
     # Améliorer le prompt pour forcer le JSON
-    enhanced_prompt = f"""
-{prompt}
-
-IMPORTANT: Répondez UNIQUEMENT avec du JSON valide. Ne pas ajouter de texte avant ou après le JSON.
-Le JSON doit être complet et bien formé. Exemple de structure:
-{{"exemple": "valeur"}}
-
-JSON:
-"""
+#     enhanced_prompt = f"""
+# {prompt}
+# JSON:
+# """
+    enhanced_prompt = prompt +"\nJSON:"
 
     for attempt in range(max_retries):
         try:
@@ -88,12 +84,18 @@ JSON:
 
             # Nettoyage plus agressif
             clean_response = strip_markdown_fences(response)
+
+            # print(f"clean_response =\n {clean_response}\n===  >>>")
             
             # Essayer d'extraire le JSON s'il y a du texte en plus
-            clean_response = extract_json_from_response(clean_response)
-            
+            # clean_response = extract_json_from_response(clean_response)
+
+            # print(f"clean_response EXTRACTED =\n {clean_response}\n===  >>>")
+
             # Validation et parsing
             data = json.loads(clean_response)
+
+            # print(f"data = {data}")
 
             if not isinstance(data, dict):
                 raise json.JSONDecodeError("Réponse n'est pas un objet JSON", clean_response, 0)
@@ -104,7 +106,7 @@ JSON:
         except json.JSONDecodeError as e:
             print(f"✗ Erreur parsing JSON (tentative {attempt + 1}): {e}")
             if attempt < max_retries - 1:
-                print(f"Réponse problématique: {clean_response[:300]}...")
+                print(f"Réponse problématique: <<<---\n{clean_response[:30000]}\n--->>>")
                 print(f"Nouvelle tentative dans {delay}s...")
                 time.sleep(delay * (attempt + 1))  # Délai croissant
             else:

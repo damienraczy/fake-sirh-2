@@ -17,7 +17,7 @@ from rag.vectorstore import SIRHVectorStore
 from rag.document_loader import SIRHDocumentLoader
 from rag.sql_retriever import SIRHSQLRetriever
 from rag.memory import ConversationMemory
-from llm_client import generate_text
+from utils.llm_client import generate_text
 
 class SIRHRAGChain:
     """Chaîne RAG principale avec mémoire conversationnelle"""

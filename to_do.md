@@ -268,3 +268,5 @@ Cette phase n'utilise **pas de prompt**. Elle s'appuie sur le plan directeur gé
       * Chaque nouvel employé est rattaché à un manager existant du poste correspondant, conformément à la structure.
 
 Cette approche en cascade transforme un problème complexe et monolithique en une série d'étapes simples, logiques et robustes.
+
+

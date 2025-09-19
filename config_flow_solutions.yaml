@@ -49,7 +49,7 @@ rag:
   
   # Configuration LLM (hérite de la config existante)
   temperature: 0.1
-  max_tokens: 1000
+  max_tokens: 16000
   
   # Configuration interface
   interface:

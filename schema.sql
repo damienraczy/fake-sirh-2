@@ -17,7 +17,13 @@ CREATE TABLE IF NOT EXISTS organizational_unit (
 CREATE TABLE IF NOT EXISTS position (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
-    description TEXT
+    description TEXT,
+    unit_id INTEGER, -- Clé étrangère vers organizational_unit
+    reports_to_position_id INTEGER, -- Lien hiérarchique (auto-référence)
+    level TEXT, -- Ex: Executive, Manager, Junior
+    FOREIGN KEY (unit_id) REFERENCES organizational_unit (id),
+    FOREIGN KEY (reports_to_position_id) REFERENCES position (id)
+
 );
 
 CREATE TABLE IF NOT EXISTS assignment (

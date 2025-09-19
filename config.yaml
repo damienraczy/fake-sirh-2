@@ -41,7 +41,7 @@ rag:
   top_k_docs: 5
   
   temperature: 0.1
-  max_tokens: 1000
+  max_tokens: 16000
   
   interface:
     title: "🏢 SIRH RAG - Experts Bois"

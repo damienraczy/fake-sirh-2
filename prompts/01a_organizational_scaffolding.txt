@@ -1,0 +1,32 @@
+You are an organizational design consultant.
+
+For a company with the following profile:
+- Company Name: {company_name}
+- Sector: {sector}
+- Size: {size} employees
+
+Design the organizational **scaffolding**. Identify the main departments (organizational units) and the top-level executive positions that lead them.
+
+The response must be a valid JSON object with the following structure:
+{{
+  "executive_team": [
+    {{
+      "title": "Position Title (e.g., Chief Executive Officer)",
+      "reports_to": null,
+      "level": "Executive"
+    }}
+  ],
+  "departments": [
+    {{
+      "unit_name": "Department Name (e.g., Product & Engineering)",
+      "description": "A brief description of the department's role.",
+      "head": {{
+        "title": "Head of Department Title (e.g., Chief Technology Officer)",
+        "reports_to": "Title of the CEO from executive_team",
+        "level": "Executive"
+      }}
+    }}
+  ]
+}}
+
+Output only the JSON.

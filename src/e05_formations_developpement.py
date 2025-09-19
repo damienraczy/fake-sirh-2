@@ -3,7 +3,7 @@
 # =============================================================================
 
 from utils.database import get_connection
-from llm_client import generate_json, LLMError
+from utils.llm_client import generate_json, LLMError
 from config import get_config
 import random
 from datetime import datetime, timedelta
