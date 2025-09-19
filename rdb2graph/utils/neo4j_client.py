@@ -1,5 +1,4 @@
 ### `rdb2graph/utils/neo4j_client.py`
-```python
 from neo4j import GraphDatabase
 from pathlib import Path
 import yaml
@@ -24,9 +23,9 @@ class Neo4jClient:
         config = self.config['neo4j']
         
         # Lire le mot de passe
-        print(f"password_file = {password_file}"
+        print(f"password_file = {password_file}")
         password_file = Path(config['password_file']).expanduser()
-        print(f"password_file expanded = {password_file}"
+        print(f"password_file expanded = {password_file}")
         with open(password_file, 'r') as f:
             password = f.read().strip()
         

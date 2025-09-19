@@ -6,13 +6,46 @@ import sqlite3
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import re
+from utils.llm_client import generate_text # Assurez-vous que generate_text est importé
 
 class SIRHSQLRetriever:
-    """Récupérateur SQL intelligent pour le SIRH"""
-    
     def __init__(self, config):
         self.config = config
         self.schema_info = self._get_schema_info()
+        self.sql_prompt_template = self._load_sql_prompt()
+
+    def _load_sql_prompt(self) -> str:
+        """Charge le prompt de conversion texte vers SQL."""
+        # Ce prompt pourrait être dans un fichier "prompts/text_to_sql.txt"
+        sql_prompt = ""
+        with open('rag/prompts/load_sql_prompt.txt', 'r', encoding='utf-8') as f:
+            sql_prompt = f.read()
+        return sql_prompt
+
+    def get_context(self, question: str) -> List[Dict[str, Any]]:
+        """Convertit une question en SQL, l'exécute et retourne le contexte."""
+        print(f"Génération de la requête SQL pour : '{question}'")
+        
+        # 1. Générer la requête SQL avec le LLM
+        prompt = self.sql_prompt_template.format(schema=self.schema_info, question=question)
+        sql_query = generate_text(prompt).strip()
+
+        if not self._is_safe_query(sql_query):
+            print(f"⚠️ Requête SQL générée non sécurisée et rejetée : {sql_query}")
+            return [{"content": "La question a été interprétée comme une requête non autorisée.", 'metadata': {'source': 'sql_generator_error'}}]
+            
+        print(f"  -> Requête SQL générée : {sql_query}")
+        
+        # 2. Exécuter la requête
+        results = self.execute_query(sql_query)
+        
+        if not results:
+            return [{"content": "Aucun résultat trouvé dans la base de données pour cette question.", 'metadata': {'source': 'sql_query_empty'}}]
+            
+        # 3. Formatter les résultats en contexte
+        content = f"Résultat de la requête '{question}':\n" + "\n".join([str(dict(row)) for row in results])
+        return [{'content': content, 'metadata': {'source': 'sql_query', 'query': sql_query}}]
+
     
     def _get_schema_info(self) -> Dict[str, List[str]]:
         """Récupère l'information sur le schéma de la base"""

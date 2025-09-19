@@ -116,12 +116,14 @@ class SIRHRAGChain:
         return {
             "answer": response,
             "sources": sources,
-            "route": route, # Renommé de query_type à route
-            "session_id": session_id
+            "route": route,
+            "session_id": session_id,
+            # Ajout pour la compatibilité avec l'ancienne API
+            "query_type": route,
+            "context_used": len(sources) > 0,
+            "conversation_length": len(self.memory.get_conversation_history(session_id))
         }
-    
-    # SUPPRIMER l'ancienne méthode _classify_query
-    
+        
     def _retrieve_context(self, question: str, route: str, session_id: str) -> Dict[str, Any]:
         """Récupère le contexte en fonction de la route déterminée."""
         context = {
