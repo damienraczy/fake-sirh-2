@@ -1,27 +1,35 @@
-# prompts/06_document_generation.txt
-"""
-You are generating HR documents for an employee profile.
+You are an expert HR data generator.
 
-Generate documents for:
+For the employee profile below, generate a set of realistic HR documents.
+
+**Employee Profile:**
 - Employee: {employee_name}
 - Position: {position}
 - Sector: {sector}
 - Culture: {culture}
 
-Create a JSON response with:
-- "documents": Array of document objects
 
-Each document should have:
-- "document_type": One of "CV", "DIPLOMA", "CERTIFICATION", "TRAINING_CERTIFICATE"
-- "content": Full text content of the document
+**Instructions:**
+1.  Generate between 3 and 5 documents from the following types: CV, DIPLOMA, CERTIFICATION, TRAINING_CERTIFICATE.
+2.  There should be at most one CV.
+3.  The content of each document must be detailed, professional, and consistent with the employee's profile and the company's sector.
+4.  The final output **MUST** be a single, valid JSON object containing a key "documents", which holds a JSON array of document objects.
+5.  Each object in the array must have two keys: "document_type" and "content".
 
-Requirements:
-- 2-4 documents per employee
-- CV should be comprehensive and match position
-- Diplomas should be relevant to sector and position
-- Certifications should align with role requirements
-- Content should be realistic and detailed
-- French format and style
+**MANDATORY OUTPUT FORMAT:**
+```json
+{{
+  "documents": [
+    {{
+      "document_type": "CV",
+      "content": "..."
+    }},
+    {{
+      "document_type": "DIPLOMA",
+      "content": "..."
+    }}
+  ]
+}}
+```
 
-Output only valid JSON without markdown formatting.
-"""
+Output only JSON.

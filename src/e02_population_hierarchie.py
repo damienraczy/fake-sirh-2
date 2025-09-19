@@ -1,4 +1,4 @@
-# src/e02_population_hierarchie.py (refonte complète)
+# src/e02_population_hierarchie.py (version corrigée et complète)
 import json
 from utils.database import get_connection, close_connection
 from utils.llm_client import generate_json, LLMError
@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 import sqlite3
 import random
 
-# (La fonction _create_employee reste la même)
 def _create_employee(
     cursor: sqlite3.Cursor,
     names_gen: NamesGenerator,
@@ -44,55 +43,57 @@ def _create_employee(
     )
     return cursor.lastrowid, hire_date
 
-def _create_and_assign_employee(cursor, names_gen, config, prompt_template, pos_data, unit_id, manager_id):
-    """Crée un employé ET son affectation."""
-    emp_id, hire_date = _create_employee(
-        cursor, names_gen, config, prompt_template,
-        pos_data['title'], pos_data.get('unit_name', 'N/A'), manager_id
-    )
-    
-    # Créer le poste s'il n'existe pas
-    cursor.execute("SELECT id FROM position WHERE title = ?", (pos_data['title'],))
-    result = cursor.fetchone()
-    if result:
-        pos_id = result[0]
-    else:
-        cursor.execute(
-            "INSERT INTO position (title, description, level, unit_id) VALUES (?, ?, ?, ?)",
-            (pos_data['title'], f"Poste de {pos_data['title']}", pos_data['level'], unit_id)
-        )
-        pos_id = cursor.lastrowid
-        
-    # Créer l'affectation
-    cursor.execute(
-        "INSERT INTO assignment (employee_id, position_id, unit_id, start_date) VALUES (?, ?, ?, ?)",
-        (emp_id, pos_id, unit_id, hire_date)
-    )
-    return emp_id
-
-def _populate_from_plan(cursor, node, names_gen, config, prompt_template, units_map, manager_id=None):
-    """Fonction récursive pour peupler l'organigramme."""
+def _create_positions_from_plan(cursor: sqlite3.Cursor, node: dict, units_map: dict, parent_pos_id=None):
+    """
+    Crée récursivement tous les postes et leur hiérarchie à partir du plan.
+    Cette fonction MODIFIE le dictionnaire 'node' en y ajoutant la clé 'db_id'.
+    """
     pos_data = node['position']
-    unit_name = node['unit_name']
-    unit_id = units_map.get(unit_name)
+    unit_id = units_map.get(node['unit_name'])
+    
+    cursor.execute(
+        "INSERT INTO position (title, description, level, unit_id, reports_to_position_id) VALUES (?, ?, ?, ?, ?)",
+        (pos_data['title'], f"Poste de {pos_data['title']}", pos_data.get('level'), unit_id, parent_pos_id)
+    )
+    current_pos_id = cursor.lastrowid
+    # Stocker l'ID de la BDD dans le plan pour l'utiliser lors du peuplement
+    pos_data['db_id'] = current_pos_id
 
-    if not unit_id:
-        print(f"Avertissement: Unité '{unit_name}' non trouvée dans la base. Affectation ignorée.")
-        return
+    for subordinate_node in node.get('subordinates', []):
+        _create_positions_from_plan(cursor, subordinate_node, units_map, current_pos_id)
 
-    # Créer les employés pour le poste de manager (s'il y en a plusieurs) ou le poste racine
+def _create_employees_from_plan(cursor: sqlite3.Cursor, node: dict, names_gen: NamesGenerator, config: dict, prompt_template: str, units_map: dict, manager_id=None):
+    """
+    Peuple récursivement la structure avec des employés en se basant sur les postes déjà créés.
+    """
+    pos_data = node['position']
+    unit_id = units_map.get(node['unit_name'])
+    pos_id = pos_data['db_id'] # Récupère l'ID du poste depuis le plan
+    
     current_manager_id = manager_id
     for i in range(pos_data['headcount']):
+        emp_id, hire_date = _create_employee(
+            cursor, names_gen, config, prompt_template,
+            pos_data['title'], node['unit_name'], manager_id
+        )
+        
+        cursor.execute(
+            "INSERT INTO assignment (employee_id, position_id, unit_id, start_date) VALUES (?, ?, ?, ?)",
+            (emp_id, pos_id, unit_id, hire_date)
+        )
+        
         # Le premier employé créé pour un poste de manager devient le manager des subalternes
-        new_emp_id = _create_and_assign_employee(cursor, names_gen, config, prompt_template, pos_data, unit_id, manager_id)
         if i == 0 and node.get('subordinates'):
-            current_manager_id = new_emp_id
+            current_manager_id = emp_id
 
-    # Appel récursif pour les subordonnés
     for subordinate_node in node.get('subordinates', []):
-        _populate_from_plan(cursor, subordinate_node, names_gen, config, prompt_template, units_map, current_manager_id)
+        _create_employees_from_plan(cursor, subordinate_node, names_gen, config, prompt_template, units_map, current_manager_id)
 
 def run():
+    """
+    Étape 2: Génère un plan d'effectif, crée la hiérarchie des postes,
+    puis peuple la structure avec les employés.
+    """
     print("Étape 2: Génération du plan d'effectif et peuplement")
     config = get_config()
     company_profile = config['entreprise']
@@ -114,12 +115,10 @@ def run():
             "sector": company_profile['secteur'],
             "target_headcount": company_profile['taille'],
             "culture": company_profile['culture'],
-            "departments": company_profile['structure_organisationnelle']['departements']
+            "departments": json.dumps(company_profile['structure_organisationnelle']['departements'])
         }
         plan_prompt = plan_prompt_template.format(**prompt_input)
         
-        print(f"plan_prompt = \n{plan_prompt}\n\n")
-
         print("Génération du plan d'effectif via LLM...")
         plan = generate_json(plan_prompt, max_retries=3)
         
@@ -127,9 +126,13 @@ def run():
         cursor.execute("SELECT id, name FROM organizational_unit")
         units_map = {name: id for id, name in cursor.fetchall()}
         
-        # 4. Peupler la base de données de manière récursive
-        print("Peuplement de la base de données selon le plan...")
-        _populate_from_plan(cursor, plan['organizational_chart'], names_gen, config, employee_prompt_template, units_map)
+        # 4. Créer la hiérarchie des postes
+        print("Création de la hiérarchie des postes...")
+        _create_positions_from_plan(cursor, plan['organizational_chart'], units_map)
+        
+        # 5. Peupler la base de données avec les employés
+        print("Peuplement de la base de données avec les employés...")
+        _create_employees_from_plan(cursor, plan['organizational_chart'], names_gen, config, employee_prompt_template, units_map)
 
         conn.commit()
         

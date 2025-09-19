@@ -70,9 +70,11 @@ class SQLiteExtractor:
         source_entity = self.mapping_config['entities'][rel_config['source_entity']]
         target_entity = self.mapping_config['entities'][rel_config['target_entity']]
         
+        # La source de la relation est la table 'target' (ex: le manager)
+        # La cible de la relation est la table 'source' (ex: l'employé)
         query = f"""
-        SELECT s.{source_entity['primary_key']} as source_id,
-               t.{target_entity['primary_key']} as target_id
+        SELECT t.{target_entity['primary_key']} as source_id,
+               s.{source_entity['primary_key']} as target_id
         FROM {source_entity['table']} s
         JOIN {target_entity['table']} t ON s.{rel_config['source_key']} = t.{rel_config['target_key']}
         WHERE s.{rel_config['source_key']} IS NOT NULL

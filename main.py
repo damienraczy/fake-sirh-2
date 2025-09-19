@@ -20,13 +20,13 @@ from src import e04_objectifs_performance as etape4
 from src import e05_formations_developpement as etape5
 from src import e06_feedback_documents as etape6
 from utils.validation import validate_database
+from rdb2graph.core.sync_manager import SyncManager
 
 def run_graph_sync():
     """Étape 9: Synchronisation vers Neo4j"""
     print("\n=== ÉTAPE 9: Synchronisation Neo4j ===")
     
     try:
-        from rdb2graph.core.sync_manager import SyncManager
         
         # Récupérer le chemin de la base SQLite depuis la config
         config = get_config()

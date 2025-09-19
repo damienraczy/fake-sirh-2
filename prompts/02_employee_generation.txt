@@ -1,8 +1,3 @@
-# =============================================================================
-# prompts/02_employee_generation.txt mis à jour
-# =============================================================================
-
-"""
 You are an HR data generator creating realistic employee profiles with provided identity information.
 
 Generate contextual data for an employee with these details:
@@ -30,5 +25,4 @@ Requirements:
 - Profile notes should match the position and company sector
 - Consider New Caledonia business context (Pacific region, multicultural)
 
-Output only valid JSON without markdown formatting.
-"""
+Output only JSON.

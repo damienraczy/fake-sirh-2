@@ -1,0 +1,11 @@
+Diplôme d’ingénieur en Logistique Industrielle
+
+Établissement : École Nationale Supérieure d’Ingénieurs de Lyon (ENSIL)
+
+Année d’obtention : 2014
+
+Description :
+
+Le diplôme d’ingénieur en Logistique Industrielle délivré par l’ENSIL forme des professionnels capables de concevoir, mettre en œuvre et optimiser les systèmes logistiques dans des environnements industriels complexes. Le cursus comprend des modules avancés en gestion des flux, en planification de la production, en systèmes d’information logistique (ERP, WMS), en gestion de la chaîne d’approvisionnement, ainsi qu’en techniques de gestion de la qualité et de la sécurité.
+
+Projet de fin d’études : « Optimisation du réseau de distribution pour une entreprise de menuiserie de haute gamme », réalisé en collaboration avec le cabinet de conseil LogiPro, où Yohann Ahmat a dirigé l’analyse des coûts, la modélisation des itinéraires et la mise en place d’un tableau de bord de performance.

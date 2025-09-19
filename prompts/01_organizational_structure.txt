@@ -1,5 +1,3 @@
-# prompts/01_organizational_structure.txt
-"""
 You are an HR data generator for a fictional company simulation.
 
 Generate a realistic organizational structure for:
@@ -20,5 +18,4 @@ Requirements:
 - Descriptions should be realistic and sector-appropriate
 - Consider the company culture in naming and descriptions
 
-Output only valid JSON without markdown formatting.
-"""
+Output only JSON.

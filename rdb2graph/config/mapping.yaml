@@ -33,7 +33,9 @@ entities:
       - id: {type: "integer", neo4j_property: "position_id"}
       - title: {type: "string", neo4j_property: "titre"}
       - description: {type: "string", neo4j_property: "description"}
-  
+      - level: {type: "string", neo4j_property: "niveau"}
+      - reports_to_position_id: {type: "integer", neo4j_property: "reports_to_id"}
+
   skill:
     table: "skill"
     node_label: "Skill"
@@ -149,6 +151,15 @@ relationships:
       - feedback_date: {type: "date", neo4j_property: "date_feedback"}
       - context: {type: "string", neo4j_property: "contexte"}
       - is_anonymous: {type: "boolean", neo4j_property: "anonyme"}
+
+  position_hierarchy:
+    type: "REPORTS_TO"
+    source_entity: "position"
+    target_entity: "position"
+    source_key: "reports_to_position_id"
+    target_key: "id"
+    direction: "target_to_source" # Un poste rapporte à un autre
+    properties: {}
 
 # Configuration de la synchronisation
 sync_config:

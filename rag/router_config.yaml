@@ -1,0 +1,41 @@
+# rag/router_config.yaml
+
+# Modèle d'embedding léger pour la classification sémantique
+embedding_model: "sentence-transformers/paraphrase-MiniLM-L3-v2"
+
+# Seuil de confiance (similarité cosinus) pour valider une route
+similarity_threshold: 0.65
+
+# Route par défaut si la confiance est trop faible
+default_route: "VECTOR"
+
+# Règles de routage basées sur l'intention
+rules:
+  - name: "Graph Queries - Hiérarchie & Relations"
+    destination: "GRAPH"
+    intent_examples:
+      - "Quel est l'organigramme de l'entreprise ?"
+      - "Montre-moi la structure de l'équipe de production."
+      - "Qui est le manager de Hugo Durand ?"
+      - "A qui rapporte le chef de chantier ?"
+      - "Quelles sont les relations entre les employés ?"
+      - "Liste les subordonnés de Wesley Robert."
+
+  - name: "SQL Queries - Agrégats & Comptages"
+    destination: "SQL"
+    intent_examples:
+      - "Combien d'employés travaillent dans l'atelier ?"
+      - "Donne-moi la liste de tous les menuisiers poseurs."
+      - "Quelle est l'ancienneté moyenne dans l'entreprise ?"
+      - "Quel est le nombre total de formations complétées ?"
+      - "Quel est le coût moyen des formations de sécurité ?"
+      - "Liste les employés ayant un score de performance supérieur à 4."
+
+  - name: "Vector Queries - Recherche Sémantique & Ouverte"
+    destination: "VECTOR"
+    intent_examples:
+      - "Quelle est notre politique sur la sécurité au travail ?"
+      - "Fais-moi un résumé du dernier entretien de performance de Nicolas Forest."
+      - "Quelles sont les compétences clés de l'équipe de pose ?"
+      - "Donne-moi des informations sur le diplôme de Maeva Martin."
+      - "Quels sont les principaux défis RH de l'entreprise ?"
