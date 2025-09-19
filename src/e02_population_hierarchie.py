@@ -1,149 +1,144 @@
-# src/e02_population_hierarchie.py (version réécrite)
+# src/e02_population_hierarchie.py (refonte complète)
+import json
 from utils.database import get_connection, close_connection
 from utils.llm_client import generate_json, LLMError
 from config import get_config
 from utils.names_generator import NamesGenerator
 from datetime import datetime, timedelta
-import random
 import sqlite3
+import random
 
-# La fonction _create_employee reste quasi identique à la version précédente
+# (La fonction _create_employee reste la même)
+def _create_employee(
+    cursor: sqlite3.Cursor,
+    names_gen: NamesGenerator,
+    config: dict,
+    prompt_template: str,
+    position_title: str,
+    unit_name: str,
+    manager_id=None
+):
+    """Génère un nom local, appelle le LLM pour le contexte, et insère un employé."""
+    company_profile = config['entreprise']
+    is_male = random.random() < company_profile['contexte_rh']['ratio_hommes']
+    prenom, nom, email_base = names_gen.generate_unique_name(is_male)
+    email = f"{email_base}@{company_profile['technique']['domaine_email']}"
 
-def _fetch_position_hierarchy(cursor: sqlite3.Cursor) -> dict:
-    """Récupère l'arbre complet des positions depuis la base de données."""
-    cursor.execute("SELECT p.id, p.title, p.level, p.reports_to_position_id, u.name as unit_name FROM position p JOIN organizational_unit u ON p.unit_id = u.id")
-    positions = {row['id']: dict(row) for row in cursor.fetchall()}
-    
-    if not positions:
-        raise ValueError("Aucun poste trouvé dans la base de données. Exécutez l'étape 1.")
-        
-    # Construire l'arbre pour la traversée
-    tree = {}
-    for pos_id, pos_data in positions.items():
-        parent_id = pos_data['reports_to_position_id']
-        if parent_id is None: # Racine (CEO)
-            tree[pos_id] = pos_data
-        else:
-            if 'children' not in positions[parent_id]:
-                positions[parent_id]['children'] = []
-            positions[parent_id]['children'].append(pos_data)
-            
-    return tree, positions
+    hire_date = (datetime.now() - timedelta(days=random.randint(30, 2000))).strftime('%Y-%m-%d')
 
-def _populate_initial_structure(cursor: sqlite3.Cursor, tree: dict, names_gen: NamesGenerator, config: dict, prompt_template: str):
-    """Peuple la structure en créant un employé par poste (traversée descendante)."""
-    print("Phase 2a: Initialisation de la structure (1 employé par poste)...")
-    
-    employee_map = {}  # position_id -> employee_id
-    manager_map = {}  # position_id -> manager_employee_id
-    
-    queue = [(node_id, None) for node_id in tree.keys()] # (position_id, manager_employee_id)
-    
-    while queue:
-        pos_id, manager_id = queue.pop(0)
-        
-        pos_data = next(p for p in cursor.execute("SELECT * FROM position WHERE id = ?", (pos_id,)).fetchall())
-        unit_name = cursor.execute("SELECT name FROM organizational_unit WHERE id = ?", (pos_data['unit_id'],)).fetchone()['name']
-
-        # Utiliser la fonction _create_employee existante
-        # (supposée définie dans ce fichier, comme dans la version précédente)
-        emp_id, _, _ = _create_employee(
-            cursor, names_gen, config, prompt_template,
-            pos_data['title'], unit_name, manager_id
+    try:
+        context_prompt = prompt_template.format(
+            position=position_title, unit=unit_name, sector=company_profile['secteur'],
+            culture=company_profile['culture'], avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
+            first_name=prenom, last_name=nom, email=email
         )
-        employee_map[pos_id] = emp_id
-        
-        # Si ce poste a des subordonnés, ajouter les enfants à la file
-        children_query = "SELECT id FROM position WHERE reports_to_position_id = ?"
-        children = [row['id'] for row in cursor.execute(children_query, (pos_id,)).fetchall()]
-        for child_id in children:
-            queue.append((child_id, emp_id))
-            
-    print(f"✓ {len(employee_map)} employés initiaux créés.")
-    return employee_map
+        employee_data = generate_json(context_prompt, max_retries=3)
+        if 'employees' in employee_data and employee_data['employees']:
+            hire_date = employee_data['employees'][0].get('hire_date', hire_date)
+    except (LLMError, Exception) as e:
+        print(f"⚠ Fallback LLM pour {prenom} {nom}: {e}")
 
-def _populate_remaining_employees(cursor: sqlite3.Cursor, config: dict, employee_map: dict, all_positions: dict, names_gen: NamesGenerator, prompt_template: str):
-    """Peuple le reste des employés avec une répartition pondérée."""
-    target_size = config['entreprise']['taille']
-    remaining_to_create = target_size - len(employee_map)
+    cursor.execute(
+        "INSERT INTO employee (first_name, last_name, email, hire_date, manager_id) VALUES (?, ?, ?, ?, ?)",
+        (prenom, nom, email, hire_date, manager_id)
+    )
+    return cursor.lastrowid, hire_date
+
+def _create_and_assign_employee(cursor, names_gen, config, prompt_template, pos_data, unit_id, manager_id):
+    """Crée un employé ET son affectation."""
+    emp_id, hire_date = _create_employee(
+        cursor, names_gen, config, prompt_template,
+        pos_data['title'], pos_data.get('unit_name', 'N/A'), manager_id
+    )
     
-    if remaining_to_create <= 0:
-        print("La taille cible est déjà atteinte ou dépassée.")
+    # Créer le poste s'il n'existe pas
+    cursor.execute("SELECT id FROM position WHERE title = ?", (pos_data['title'],))
+    result = cursor.fetchone()
+    if result:
+        pos_id = result[0]
+    else:
+        cursor.execute(
+            "INSERT INTO position (title, description, level, unit_id) VALUES (?, ?, ?, ?)",
+            (pos_data['title'], f"Poste de {pos_data['title']}", pos_data['level'], unit_id)
+        )
+        pos_id = cursor.lastrowid
+        
+    # Créer l'affectation
+    cursor.execute(
+        "INSERT INTO assignment (employee_id, position_id, unit_id, start_date) VALUES (?, ?, ?, ?)",
+        (emp_id, pos_id, unit_id, hire_date)
+    )
+    return emp_id
+
+def _populate_from_plan(cursor, node, names_gen, config, prompt_template, units_map, manager_id=None):
+    """Fonction récursive pour peupler l'organigramme."""
+    pos_data = node['position']
+    unit_name = node['unit_name']
+    unit_id = units_map.get(unit_name)
+
+    if not unit_id:
+        print(f"Avertissement: Unité '{unit_name}' non trouvée dans la base. Affectation ignorée.")
         return
 
-    print(f"\nPhase 2b: Création des {remaining_to_create} employés restants...")
-    
-    # Créer une liste pondérée de postes à pourvoir (favorisant les niveaux bas)
-    level_weights = {
-        "Junior": 10,
-        "Individual Contributor": 8,
-        "Senior Individual Contributor": 3,
-        "Manager": 0, # Ne pas ajouter de managers supplémentaires
-        "Executive": 0
-    }
-    
-    positions_to_fill = []
-    weights = []
-    for pos_id, pos_data in all_positions.items():
-        weight = level_weights.get(pos_data['level'], 1)
-        if weight > 0:
-            positions_to_fill.append(pos_data)
-            weights.append(weight)
+    # Créer les employés pour le poste de manager (s'il y en a plusieurs) ou le poste racine
+    current_manager_id = manager_id
+    for i in range(pos_data['headcount']):
+        # Le premier employé créé pour un poste de manager devient le manager des subalternes
+        new_emp_id = _create_and_assign_employee(cursor, names_gen, config, prompt_template, pos_data, unit_id, manager_id)
+        if i == 0 and node.get('subordinates'):
+            current_manager_id = new_emp_id
 
-    if not positions_to_fill:
-        print("⚠ Aucun poste de niveau subalterne à pourvoir.")
-        return
-
-    for i in range(remaining_to_create):
-        # Choisir un poste à pourvoir en fonction des poids
-        chosen_pos = random.choices(positions_to_fill, weights=weights, k=1)[0]
-        
-        # Trouver le manager pour ce poste
-        manager_pos_id = chosen_pos['reports_to_position_id']
-        manager_id = employee_map.get(manager_pos_id)
-        
-        if not manager_id:
-            print(f"⚠ Manager non trouvé pour le poste {chosen_pos['title']}, impossible de créer l'employé.")
-            continue
-            
-        _create_employee(
-            cursor, names_gen, config, prompt_template,
-            chosen_pos['title'], chosen_pos['unit_name'], manager_id
-        )
-        if (i + 1) % 50 == 0:
-            print(f"  ... {i+1}/{remaining_to_create} créés")
+    # Appel récursif pour les subordonnés
+    for subordinate_node in node.get('subordinates', []):
+        _populate_from_plan(cursor, subordinate_node, names_gen, config, prompt_template, units_map, current_manager_id)
 
 def run():
-    """
-    Étape 2: Peuplement de la hiérarchie basée sur le blueprint existant.
-    """
-    print("Étape 2: Démarrage du peuplement de la hiérarchie")
+    print("Étape 2: Génération du plan d'effectif et peuplement")
     config = get_config()
+    company_profile = config['entreprise']
     names_gen = NamesGenerator()
     conn = get_connection()
     
     try:
         cursor = conn.cursor()
         
+        # 1. Lire les prompts
+        with open('prompts/01_headcount_plan_generation.txt', 'r', encoding='utf-8') as f:
+            plan_prompt_template = f.read()
         with open('prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
-            prompt_template = f.read()
+            employee_prompt_template = f.read()
+            
+        # 2. Préparer et appeler le LLM pour le plan
+        prompt_input = {
+            "company_name": company_profile['nom'],
+            "sector": company_profile['secteur'],
+            "target_headcount": company_profile['taille'],
+            "culture": company_profile['culture'],
+            "departments": company_profile['structure_organisationnelle']['departements']
+        }
+        plan_prompt = plan_prompt_template.format(**prompt_input)
+        
+        print(f"plan_prompt = \n{plan_prompt}\n\n")
 
-        _, all_positions = _fetch_position_hierarchy(cursor)
+        print("Génération du plan d'effectif via LLM...")
+        plan = generate_json(plan_prompt, max_retries=3)
         
-        # Phase 1: Créer 1 employé par poste
-        initial_employee_map = _populate_initial_structure(cursor, tree, names_gen, config, prompt_template)
+        # 3. Récupérer les unités depuis la BDD
+        cursor.execute("SELECT id, name FROM organizational_unit")
+        units_map = {name: id for id, name in cursor.fetchall()}
         
-        # Phase 2: Remplir jusqu'à la taille cible
-        _populate_remaining_employees(cursor, config, initial_employee_map, all_positions, names_gen, prompt_template)
-        
+        # 4. Peupler la base de données de manière récursive
+        print("Peuplement de la base de données selon le plan...")
+        _populate_from_plan(cursor, plan['organizational_chart'], names_gen, config, employee_prompt_template, units_map)
+
         conn.commit()
         
         cursor.execute("SELECT COUNT(*) FROM employee")
         total_employees = cursor.fetchone()[0]
-        print(f"\n✓ Peuplement terminé. Total de {total_employees} employés dans la base.")
+        print(f"\n✓ Peuplement terminé. Total de {total_employees} employés créés (cible: {company_profile['taille']}).")
 
     except Exception as e:
-        print(f"\nErreur critique lors du peuplement: {e}")
+        print(f"Erreur critique lors du peuplement: {e}")
         conn.rollback()
         raise
     finally:

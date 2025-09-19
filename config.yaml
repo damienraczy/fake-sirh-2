@@ -15,7 +15,7 @@ entreprise:
       - "Pose / Chantier"
       - "Support & Logistique"
       - "Administration & Commerce"
-      - "Direction"
+      - "Direction":
     niveaux_hierarchiques: 3
     style_management: "Hiérarchie simple et directe"
   

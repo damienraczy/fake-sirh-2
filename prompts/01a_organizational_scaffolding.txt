@@ -29,4 +29,4 @@ The response must be a valid JSON object with the following structure:
   ]
 }}
 
-Output only the JSON.
+Output only JSON.

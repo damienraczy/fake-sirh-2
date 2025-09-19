@@ -1,0 +1,55 @@
+You are an expert HR consultant tasked with designing a detailed staffing plan for a company.
+
+Based on the company profile provided below, generate a realistic hierarchical organizational chart that meets the exact target headcount.
+
+**Company Profile:**
+```json
+{{
+  "company_name": "{company_name}",
+  "sector": "{sector}",
+  "target_headcount": {target_headcount},
+  "culture": "{culture}",
+  "departments": {departments}
+}}
+```
+
+**Instructions:**
+
+1.  The `unit_name` for each node in the chart **MUST** be one of the official department names provided in the list above. Do not invent new department names.
+2.  Create a top-level position (e.g., CEO, Director).
+3.  Nest all other positions and departments logically under their respective managers.
+4.  The `headcount` property for each position must be an integer.
+5.  The sum of all `headcount` values in the entire structure **must equal** the `target_headcount`.
+6.  Distribute the headcount realistically, with more employees in operational roles than in management.
+7.  The `reports_to` field must accurately reflect the hierarchy. The top-level position's `reports_to` must be `null`.
+
+**Output Format:**
+The output must be a single, valid JSON object. The structure must be as follows:
+
+```json
+{{
+  "organizational_chart": {{
+    "unit_name": "Department Name",
+    "position": {{
+      "title": "Position Title",
+      "headcount": 1,
+      "level": "Executive | Manager | Individual Contributor | Junior",
+      "reports_to": null
+    }},
+    "subordinates": [
+      {{
+        "unit_name": "Sub-Department Name",
+        "position": {{
+          "title": "Subordinate's Title",
+          "headcount": 5,
+          "level": "...",
+          "reports_to": "Position Title of the manager"
+        }},
+        "subordinates": []
+      }}
+    ]
+  }}
+}}
+```
+
+Output only JSON.
