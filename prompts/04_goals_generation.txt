@@ -1,28 +1,39 @@
-# prompts/04_goals_generation.txt
-"""
 You are an HR data generator creating SMART goals for performance management.
 
 Generate goals for:
 - Employee: {employee_name}
 - Position: {position}
 - Unit: {unit}
-- Year: {year}
+- Evaluation Year: {year}
 - Company challenges: {challenges}
+- Sector: {sector}
 - Culture: {culture}
+- Location: {location}
+- Regional culture: {region_culture}
+
+IMPORTANT CONTEXT:
+- This evaluation is for the year {year} (may be a past year)
+- Generate goals that would have been relevant for that specific year
+- Status should reflect realistic outcomes for goals set in {year}
+- Consider the business context and challenges of {year}
 
 Create a JSON response with:
 - "goals": Array of goal objects
 
 Each goal should have:
-- "description": Specific, measurable goal description
-- "status": One of "On Track", "Completed", "At Risk", "Not Started"
+- "description": Specific, measurable goal description appropriate for {year}
+- "status": One of "Completed", "On Track", "At Risk", "Not Started"
 
 Requirements:
 - 3-5 goals per employee
 - Goals should be SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
 - Mix of individual performance and team/company objectives
 - Reflect position responsibilities and company challenges
-- Status should be realistic distribution
+- Status distribution should be realistic for goals set in {year}:
+  * For past years: Majority "Completed" or "On Track" 
+  * For current year: Mixed status more realistic
 
-Output only valid JSON without markdown formatting.
-"""
+Language:
+- output in {language}
+
+Output only valid JSON.

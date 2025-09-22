@@ -1,5 +1,3 @@
-# prompts/06_feedback_generation.txt
-"""
 You are generating 360-degree feedback for performance management.
 
 Generate feedback entries for:
@@ -26,5 +24,4 @@ Requirements:
 - Reflect company culture in tone
 - Include both positive aspects and development areas
 
-Output only valid JSON without markdown formatting.
-"""
+Output only valid JSON.

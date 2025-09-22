@@ -25,7 +25,12 @@ def run():
     
     prompt = prompt_template.format(
         sector=company_profile['secteur'],
-        challenges=', '.join(company_profile['defis'])
+        challenges=', '.join(company_profile['defis']),
+        company_sector=company_profile['secteur'],
+        location=company_profile['location'],
+        region_culture=company_profile['region_culture'],
+        company_culture=company_profile['culture'],
+        language=company_profile['language'],
     )
     
     try:
@@ -37,6 +42,7 @@ def run():
         if 'skills' in skills_data:
             for skill in skills_data['skills']:
                 if 'name' in skill and 'category' in skill:
+                    print(f"Création compétence: {skill['name']} ({skill['category']})")
                     cursor.execute("""
                         INSERT INTO skill (name, category)
                         VALUES (?, ?)
@@ -75,12 +81,12 @@ def run():
             
             try:
                 employee_skills_data = generate_json(assignment_prompt)
-                
+                # print(f"employee_skills_data: {employee_skills_data}")
                 skills_assigned = 0
                 if 'skills' in employee_skills_data:
                     for skill_assignment in employee_skills_data['skills']:
-                        if 'skill' in skill_assignment and 'level' in skill_assignment:
-                            skill_name = skill_assignment['skill']
+                        if 'skill_name' in skill_assignment and 'level' in skill_assignment:
+                            skill_name = skill_assignment['skill_name']
                             level = skill_assignment['level']
                             
                             if skill_name in skill_ids:

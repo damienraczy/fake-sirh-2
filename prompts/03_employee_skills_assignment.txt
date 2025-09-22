@@ -13,7 +13,6 @@ Each skill assignment should have:
 - "skill": Exact skill name from available skills
 - "level": One of "Beginner", "Intermediate", "Advanced", "Expert"
 
-
 **Instructions:**
 1.  Identify between 5 and 8 relevant skills.
 2.  For managerial or executive roles, include strategic and leadership skills (e.g., "Budget Management", "Strategic Planning", "Team Leadership").
@@ -22,7 +21,6 @@ Each skill assignment should have:
 5.  The output must be a valid JSON object containing a "skills" key, which holds an array of skill objects.
 
 **Output Format:**
-
 ```json
 {{
   "skills": [

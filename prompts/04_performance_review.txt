@@ -1,24 +1,34 @@
-# prompts/04_performance_review.txt
-"""
 You are an HR manager conducting a performance review.
 
 Generate a performance review for:
 - Employee: {employee_name}
 - Position: {position}
 - Unit: {unit}
-- Year: {year}
+- Evaluation Year: {year}
 - Culture: {culture}
+- Sector: {sector}
+- Location: {location}
+- Regional culture: {region_culture}
+
+IMPORTANT CONTEXT:
+- This is a performance review for the year {year} (may be a past year)
+- Generate comments that reflect the employee's performance during {year}
+- Consider the business context and challenges specific to {year}
+- The review should feel authentic for that time period
 
 Create a JSON response with:
 - "score": Integer from 1 to 5 (1=Poor, 2=Below Expectations, 3=Meets Expectations, 4=Exceeds Expectations, 5=Outstanding)
-- "comments": Detailed performance review comments
+- "comments": Detailed performance review comments for the year {year}
 
 Requirements:
 - Score should follow realistic distribution (most employees 3-4)
-- Comments should be professional, constructive, and specific
-- Include strengths and areas for improvement
+- Comments should be professional, constructive, and specific to {year}
+- Include strengths and areas for improvement relevant to {year}
 - Reflect company culture in tone and focus
 - Comments should be 100-200 words
+- Make the review feel authentic for the {year} evaluation period
 
-Output only valid JSON without markdown formatting.
-"""
+Language:
+- output in {language}
+
+Output only valid JSON.

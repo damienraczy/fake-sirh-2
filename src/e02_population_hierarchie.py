@@ -27,9 +27,17 @@ def _create_employee(
 
     try:
         context_prompt = prompt_template.format(
-            position=position_title, unit=unit_name, sector=company_profile['secteur'],
-            culture=company_profile['culture'], avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
-            first_name=prenom, last_name=nom, email=email
+            position=position_title, 
+            unit=unit_name,
+            sector=company_profile['secteur'],
+            culture=company_profile['culture'],
+            avg_tenure=company_profile['contexte_rh']['anciennete_moyenne'],
+            first_name=prenom,
+            last_name=nom,
+            email=email,
+            location = company_profile['location'],
+            language = company_profile['language'],
+            region_culture = company_profile['region_culture'],
         )
         employee_data = generate_json(context_prompt, max_retries=3)
         if 'employees' in employee_data and employee_data['employees']:

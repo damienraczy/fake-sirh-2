@@ -4,9 +4,11 @@ entreprise:
   taille: 15
   culture: "Savoir-faire artisanal, esprit d’équipe"
   location: "Nouvelle-Calédonie"
+  currency: "XPF"
   region_culture: "Pacific region, multicultural"
   language: "fr_fr"
   etape_croissance: "PME stable"
+  annual_reviews: "Q1"
   defis:
     - "Recrutement d’ouvriers qualifiés"
     - "Maintien des normes de sécurité"
@@ -18,7 +20,7 @@ entreprise:
       - "Pose / Chantier"
       - "Support & Logistique"
       - "Administration & Commerce"
-      - "Direction":
+      - "Direction"
     niveaux_hierarchiques: 3
     style_management: "Hiérarchie simple et directe"
   

@@ -1,12 +1,11 @@
-# prompts/05_training_assignment.txt
-"""
 You are an HR data generator assigning training to employees.
 
 Assign training history for:
 - Employee: {employee_name}
 - Available trainings: {available_trainings}
-- Budget per employee: {budget_per_employee}
+- Budget per employee: {budget_per_employee} in {currency}
 - Sector: {sector}
+- Year: {year}
 
 Create a JSON response with:
 - "training_records": Array of training record objects
@@ -18,11 +17,31 @@ Each record should have:
 - "comments": Brief feedback about the training
 
 Requirements:
-- 1-3 trainings per employee (realistic distribution)
+- 1-2 trainings per employee maximum for this year
 - Consider employee role for training relevance
-- Realistic scores and satisfaction ratings
+- Realistic scores and satisfaction ratings (most scores 70-90)
 - Stay within budget constraints
 - Comments should be realistic employee feedback
+- Focus on most relevant trainings for the employee's development
 
-Output only valid JSON without markdown formatting.
-"""
+Language:
+- output in {language}
+
+**Output Format:**
+```json
+{{   'training_records':
+    [
+        {{  'training_name': '3 to 7 words max',
+            'score': 1 to 100, centered on 75,
+            'satisfaction_rating': 5,
+            'comments': '7 to 13 words max.'
+        }},
+        {{  'training_name': '...',
+            'score': xx,
+            'satisfaction_rating': x,
+            'comments': "..."
+        }}
+    ]
+}}
+
+Output only valid JSON.

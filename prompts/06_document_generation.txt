@@ -8,7 +8,6 @@ For the employee profile below, generate a set of realistic HR documents.
 - Sector: {sector}
 - Culture: {culture}
 
-
 **Instructions:**
 1.  Generate between 3 and 5 documents from the following types: CV, DIPLOMA, CERTIFICATION, TRAINING_CERTIFICATE.
 2.  There should be at most one CV.
