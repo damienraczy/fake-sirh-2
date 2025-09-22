@@ -1,3 +1,8 @@
+### A lire
+
+https://neo4j.com/blog/news/graphrag-ecosystem-tools/?utm_source=Marketo&utm_medium=Email&utm_campaign=GenAI-Nurture-Global-&utm_content=---
+
+
 ### ## Priorité 1 : Fiabilisation immédiate du cœur RAG (pour des démos robustes)
 
 🎯 **Objectif** : S'assurer que le routeur prend les bonnes décisions et que le système ne retourne pas d'erreur inattendue pendant une démonstration.

@@ -1,4 +1,0 @@
-Nom du Diplôme: Diplôme d'ingénieur en menuiserie et fabrication de meubles
-Établissement: École Nationale Supérieure d'Ingénieurs de la Construction (ENSIC), Paris
-Année d'obtention: 2012
-Description: Programme de formation de 5 ans intégrant les disciplines de la menuiserie, de la conception assistée par ordinateur (CAO), de la gestion de production et de la qualité. Le diplôme inclut des stages pratiques de 6 mois dans des ateliers de menuiserie de renom, ainsi qu'un projet de fin d'études portant sur la conception d'un système de stockage modulable pour pièces de bois.
