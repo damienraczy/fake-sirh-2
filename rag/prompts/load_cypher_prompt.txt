@@ -14,7 +14,7 @@ RULES:
 EXAMPLE:
 - Question: "Qui est le manager de John Doe ?"
 - Correct Cypher query for this schema:
-  MATCH (manager:Employee)-[:MANAGES]->(employee:Employee {last_name: 'Doe', first_name: 'John'})
+  MATCH (manager:Employee)-[:MANAGES]->(employee:Employee {{last_name: 'Doe', first_name: 'John'}})
   RETURN manager.first_name, manager.last_name
 
 QUESTIONS:
