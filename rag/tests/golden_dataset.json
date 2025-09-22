@@ -1,0 +1,31 @@
+[
+  {
+    "question_id": "GRAPH_001",
+    "question": "Qui est le manager de Nathan Naisseline ?",
+    "expected_route": "GRAPH",
+    "expected_keywords": [
+      "John",
+      "Lagikula"
+    ]
+  },
+  {
+    "question_id": "SQL_001",
+    "question": "Combien d'employés travaillent à la production ?",
+    "expected_route": "SQL",
+    "expected_keywords": [
+      "6"
+    ]
+  },
+  {
+    "question_id": "VECTOR_001",
+    "question": "Fais-moi un résumé du dernier entretien de performance de Samuel Ahmat.",
+    "expected_route": "VECTOR",
+    "expected_keywords": [
+      "Samuel",
+      "Ahmat",
+      "score",
+      "évaluation",
+      "commentaires"
+    ]
+  }
+]

@@ -29,6 +29,7 @@ rules:
     destination: "SQL"
     intent_examples:
       - "Combien d'employés travaillent dans l'atelier ?"
+      - "Combien d'employés travaillent à la production ?"
       - "Donne-moi la liste de tous les menuisiers poseurs."
       - "Quelle est l'ancienneté moyenne dans l'entreprise ?"
       - "Quel est le nombre total de formations complétées ?"
