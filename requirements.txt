@@ -6,12 +6,12 @@ Unidecode
 
 fastapi
 uvicorn[standard]
-langchain
-langchain-community
+# langchain
+# langchain-community
 sentence-transformers
 chromadb
-sqlalchemy
-pandas
+# sqlalchemy
+# pandas
 pydantic
 jinja2
 

@@ -4,7 +4,7 @@
 embedding_model: "sentence-transformers/paraphrase-MiniLM-L3-v2"
 
 # Seuil de confiance (similarité cosinus) pour valider une route
-similarity_threshold: 0.65
+similarity_threshold: 0.68
 
 # Route par défaut si la confiance est trop faible
 default_route: "VECTOR"
@@ -20,6 +20,10 @@ rules:
       - "A qui rapporte le chef de chantier ?"
       - "Quelles sont les relations entre les employés ?"
       - "Liste les subordonnés de Wesley Robert."
+      - "Dessine la hiérarchie du département Support."
+      - "Qui est le N+2 de Jonas Martin ?"
+      - "Y a-t-il des cycles dans la hiérarchie de management ?"
+      - "Montre-moi les employés qui n'ont pas de manager direct."
 
   - name: "SQL Queries - Agrégats & Comptages"
     destination: "SQL"
@@ -30,6 +34,10 @@ rules:
       - "Quel est le nombre total de formations complétées ?"
       - "Quel est le coût moyen des formations de sécurité ?"
       - "Liste les employés ayant un score de performance supérieur à 4."
+      - "Quel est le nombre d'employés par département ?"
+      - "Donne la liste des personnes embauchées en 2022."
+      - "Quel est le taux de turnover ?"
+      - "Sors-moi tous les employés dont le nom de famille est 'Martin'."
 
   - name: "Vector Queries - Recherche Sémantique & Ouverte"
     destination: "VECTOR"
@@ -39,3 +47,8 @@ rules:
       - "Quelles sont les compétences clés de l'équipe de pose ?"
       - "Donne-moi des informations sur le diplôme de Maeva Martin."
       - "Quels sont les principaux défis RH de l'entreprise ?"
+      - "Quelles sont les forces et faiblesses de Djina Fabre d'après ses feedbacks ?"
+      - "Y a-t-il des formations sur la gestion de projet Agile ?"
+      - "Explique-moi la culture de l'entreprise."
+      - "Comment se déroule une évaluation annuelle ?"
+      - "Trouve le CV de Yohann Ahmat."

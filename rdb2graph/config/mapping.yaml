@@ -1,7 +1,7 @@
 # Configuration du mapping SQLite → Neo4j
 database:
   sqlite_path: "db/experts_bois.sqlite"  # Sera surchargé par la config globale
-  neo4j_database: "sirh"
+  neo4j_database: "neo4j"
 
 # Mapping des entités (tables → nœuds)
 entities:

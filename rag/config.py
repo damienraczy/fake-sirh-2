@@ -39,6 +39,9 @@ class RAGConfig:
     company_name: str = ""
     company_sector: str = ""
     company_culture: str = ""
+    location: str = ""
+    region_culture: str = ""
+    language: str = ""
     
     @classmethod
     def from_base_config(cls, base_config: Dict[str, Any]) -> 'RAGConfig':
@@ -72,7 +75,10 @@ class RAGConfig:
             # Entreprise
             company_name=entreprise['nom'],
             company_sector=entreprise['secteur'],
-            company_culture=entreprise['culture']
+            company_culture=entreprise['culture'],
+            location=entreprise['location'],
+            region_culture=entreprise['region_culture'],
+            language=entreprise['language'],
         )
     
     def __post_init__(self):

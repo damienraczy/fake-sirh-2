@@ -8,6 +8,8 @@ Generate contextual data for an employee with these details:
 - Sector: {sector}
 - Company culture: {culture}
 - Average tenure: {avg_tenure}
+- Location: {location}
+- Regional culture: {region_culture}
 
 Create a JSON response with:
 - "employees": Array with one employee object
@@ -19,10 +21,13 @@ The employee object should have:
 - "hire_date": Realistic hire date in YYYY-MM-DD format
 - "profile_notes": Brief professional background notes
 
+Language:
+- output in {language}
+
 Requirements:
 - Use the exact name and email provided
 - Hire date should reflect realistic tenure for the position level
 - Profile notes should match the position and company sector
-- Consider New Caledonia business context (Pacific region, multicultural)
+- Consider {location} business context ({region_culture})
 
 Output only JSON.

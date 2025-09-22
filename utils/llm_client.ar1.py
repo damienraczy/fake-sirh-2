@@ -1,21 +1,10 @@
-# utils/llm_client.py (version mise à jour avec logging)
+# llm_client.py (version corrigée)
 import os
 import requests
 import json
 import time
-import logging
 from dotenv import load_dotenv
 from utils.utils_llm import strip_markdown_fences
-
-# --- Début des modifications ---
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='llm_calls.log', # Les logs seront sauvegardés dans ce fichier
-    filemode='a'
-)
-# --- Fin des modifications ---
 
 # Configuration API
 OLLAMA_API_URL = "https://ollama.com/api/generate"
@@ -32,7 +21,6 @@ def generate_text(prompt: str, max_tokens: int = 16000):
     Envoie un prompt au LLM via l'API Ollama et retourne le texte généré.
     """
     if not OLLAMA_API_URL or not OLLAMA_MODEL:
-        logging.error("Configuration LLM manquante (URL ou MODEL).")
         return "Erreur de configuration LLM."
 
     headers = {
@@ -42,8 +30,8 @@ def generate_text(prompt: str, max_tokens: int = 16000):
     }
 
     payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
+        "model": OLLAMA_MODEL, 
+        "prompt": prompt, 
         "stream": False,
         "options": {
             "num_predict": max_tokens,
@@ -52,8 +40,6 @@ def generate_text(prompt: str, max_tokens: int = 16000):
         }
     }
 
-    # --- Début des modifications ---
-    start_time = time.time()
     try:
         response = requests.post(
             OLLAMA_API_URL,
@@ -66,61 +52,75 @@ def generate_text(prompt: str, max_tokens: int = 16000):
         response_data = response.json()
         clean_response = response_data.get("response", "").strip()
 
-        latency = time.time() - start_time
-        logging.info(f"Appel LLM (generate_text) SUCCES - Latence: {latency:.2f}s - Prompt: '{prompt[:200]}...'")
-        # --- Fin des modifications ---
-
         return clean_response
 
     except requests.exceptions.RequestException as e:
-        latency = time.time() - start_time
-        logging.error(f"Appel LLM (generate_text) ECHEC - Latence: {latency:.2f}s - Erreur: {e} - Prompt: '{prompt[:200]}...'")
+        print(f"Erreur critique lors de la requête LLM: {e}")
         return f"Erreur de communication avec le LLM: {e}"
     except json.JSONDecodeError:
-        latency = time.time() - start_time
-        logging.error(f"Appel LLM (generate_text) ECHEC - Latence: {latency:.2f}s - Erreur: Décodage JSON - Réponse brute: {response.text[:200]}")
+        print(f"Erreur: Impossible de décoder la réponse JSON du LLM. Réponse brute: {response.text}")
         return "Erreur de format de réponse du LLM."
 
 def generate_json(prompt: str, max_retries: int = 5, delay: float = 0.5, max_tokens: int = 16000):
     """
     Génère du JSON valide via LLM avec retry automatique renforcé.
     """
-    enhanced_prompt = prompt + "\nJSON:"
+    # Améliorer le prompt pour forcer le JSON
+#     enhanced_prompt = f"""
+# {prompt}
+# JSON:
+# """
+    enhanced_prompt = prompt +"\nJSON:"
 
     for attempt in range(max_retries):
         try:
-            # --- Début des modifications (logging simple ici) ---
-            logging.info(f"Tentative {attempt + 1}/{max_retries} pour générer du JSON - Prompt: '{enhanced_prompt[:200]}...'")
-            # --- Fin des modifications ---
+            print(f"Génération LLM - tentative {attempt + 1}/{max_retries}")
 
+            # Appel LLM avec plus de tokens
             response = generate_text(enhanced_prompt, max_tokens=max_tokens)
 
             if not response or "Erreur" in response:
                 raise Exception(f"Erreur LLM: {response}")
 
+            # Nettoyage plus agressif
             clean_response = strip_markdown_fences(response)
+
+            # print(f"clean_response =\n {clean_response}\n===  >>>")
+            
+            # Essayer d'extraire le JSON s'il y a du texte en plus
+            # clean_response = extract_json_from_response(clean_response)
+
+            # print(f"clean_response EXTRACTED =\n {clean_response}\n===  >>>")
+
+            # Validation et parsing
             data = json.loads(clean_response)
 
-            if not isinstance(data, dict):
-                raise json.JSONDecodeError("La réponse n'est pas un objet JSON", clean_response, 0)
+            # print(f"data = {data}")
 
-            logging.info(f"JSON valide généré à la tentative {attempt + 1}")
+            if not isinstance(data, dict):
+                raise json.JSONDecodeError("Réponse n'est pas un objet JSON", clean_response, 0)
+
+            print(f"✓ JSON valide généré à la tentative {attempt + 1}")
             return data
 
         except json.JSONDecodeError as e:
-            logging.warning(f"Erreur parsing JSON (tentative {attempt + 1}): {e} - Réponse: {clean_response[:300]}")
+            print(f"✗ Erreur parsing JSON (tentative {attempt + 1}): {e}")
             if attempt < max_retries - 1:
-                time.sleep(delay * (attempt + 1))
+                print(f"Réponse problématique: <<<---\n{clean_response[:30000]}\n--->>>")
+                print(f"Nouvelle tentative dans {delay}s...")
+                time.sleep(delay * (attempt + 1))  # Délai croissant
             else:
-                logging.error(f"Échec final de génération JSON après {max_retries} tentatives.")
+                print(f"Échec définitif après {max_retries} tentatives")
+                print(f"Dernière réponse: {clean_response}")
                 raise LLMError(f"Impossible de générer du JSON valide après {max_retries} tentatives")
 
         except Exception as e:
-            logging.warning(f"Erreur LLM (tentative {attempt + 1}): {e}")
+            print(f"✗ Erreur LLM (tentative {attempt + 1}): {e}")
             if attempt < max_retries - 1:
+                print(f"Nouvelle tentative dans {delay}s...")
                 time.sleep(delay * (attempt + 1))
             else:
-                logging.error(f"Échec final de génération JSON après {max_retries} tentatives.")
+                print(f"Échec définitif après {max_retries} tentatives")
                 raise LLMError(f"Erreur LLM après {max_retries} tentatives: {e}")
 
 def extract_json_from_response(response: str) -> str:
@@ -128,8 +128,13 @@ def extract_json_from_response(response: str) -> str:
     Extrait le JSON d'une réponse qui pourrait contenir du texte supplémentaire.
     """
     response = response.strip()
+    
+    # Chercher le premier { et le dernier }
     start = response.find('{')
     end = response.rfind('}')
+    
     if start != -1 and end != -1 and end > start:
         return response[start:end+1]
+    
+    # Si pas de JSON trouvé, retourner tel quel
     return response

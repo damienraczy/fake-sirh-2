@@ -3,6 +3,9 @@ entreprise:
   secteur: "Menuiserie - Fabrication et pose"
   taille: 15
   culture: "Savoir-faire artisanal, esprit d’équipe"
+  location: "Nouvelle-Calédonie"
+  region_culture: "Pacific region, multicultural"
+  language: "fr_fr"
   etape_croissance: "PME stable"
   defis:
     - "Recrutement d’ouvriers qualifiés"

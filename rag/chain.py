@@ -42,32 +42,22 @@ class SIRHRAGChain:
         self.graph_retriever = SIRHGraphRetriever(config) # Nouveau
         
         self.memory = ConversationMemory()
-        self.system_prompt = self._load_system_prompt()
+        self.system_prompt_template = self._load_system_prompt_template()
         self._initialize_vectorstore()
         self.memory.cleanup_old_conversations()
         
         print("✅ Chaîne RAG avec routage initialisée")
-    
-    # ... (les méthodes _load_system_prompt et _initialize_vectorstore restent les mêmes) ...
 
-    def _load_system_prompt(self) -> str:
-        """Charge le prompt système avec instructions de mémoire"""
-        return f"""Tu es un assistant RH intelligent pour {self.config.company_name}, une entreprise du secteur "{self.config.company_sector}" basée en Nouvelle-Calédonie.
-        Tu as accès à toutes les données RH de l'entreprise ET à l'historique de cette conversation.
-        INSTRUCTIONS :
-        1. Réponds UNIQUEMENT en français
-        2. Base tes réponses sur les données fournies ET le contexte conversationnel
-        3. Utilise l'historique pour maintenir la cohérence et faire des références
-        4. Si l'utilisateur fait référence à une question précédente, utilise le contexte
-        5. Reste professionnel et bienveillant
-        6. Respecte la confidentialité (pas de données sensibles)
-        7. Fournis des réponses structurées et actionables
-        CONTEXTE ENTREPRISE :
-        - Nom : {self.config.company_name}
-        - Secteur : {self.config.company_sector}
-        - Culture : {self.config.company_culture}
-        - Localisation : Nouvelle-Calédonie
-        Utilise le contexte conversationnel ET les données pour répondre de façon cohérente."""
+    def _load_system_prompt_template(self) -> str:
+        """Charge le template du prompt système depuis un fichier."""
+        try:
+            prompt_path = current_dir / 'prompts' / 'system_prompt.txt'
+            with open(prompt_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            print(f"❌ Erreur: Fichier de prompt système introuvable à l'emplacement {prompt_path}")
+            # Fournir un prompt de secours simple en cas d'erreur
+            return "Tu es un assistant RH intelligent pour {company_name}. Réponds en français en te basant sur les données fournies."
 
     def _initialize_vectorstore(self):
         """Initialise la base vectorielle avec les documents"""
@@ -101,7 +91,7 @@ class SIRHRAGChain:
         route = self.router.route(question)
         
         # 2. Récupérer le contexte
-        context = self._retrieve_context(question, route, session_id)
+        context, used_route = self._retrieve_context(question, route, session_id)
         
         # 3. Générer la réponse
         response = self._generate_response_with_memory(question, context, session_id)
@@ -110,46 +100,67 @@ class SIRHRAGChain:
         sources = self._extract_sources(context.get('documents', []))
         
         # 5. Sauvegarder la réponse dans la mémoire
-        response_metadata = {'route': route, 'sources': sources, 'session_id': session_id}
+        response_metadata = {'route': used_route, 'sources': sources, 'session_id': session_id}
         self.memory.add_message(session_id, 'assistant', response, response_metadata)
         
         return {
             "answer": response,
             "sources": sources,
-            "route": route,
+            "route": used_route, # Utiliser la route réellement empruntée
             "session_id": session_id,
-            # Ajout pour la compatibilité avec l'ancienne API
-            "query_type": route,
+            "query_type": used_route,
             "context_used": len(sources) > 0,
             "conversation_length": len(self.memory.get_conversation_history(session_id))
         }
         
-    def _retrieve_context(self, question: str, route: str, session_id: str) -> Dict[str, Any]:
-        """Récupère le contexte en fonction de la route déterminée."""
+    def _retrieve_context(self, question: str, route: str, session_id: str) -> (Dict[str, Any], str):
+        """
+        Récupère le contexte en fonction de la route déterminée.
+        Implémente une stratégie de fallback vers la recherche vectorielle.
+        """
         context = {
             'documents': [],
             'conversation_history': self.memory.get_context_for_query(session_id, question)
         }
         
         retrieved_docs = []
+        used_route = route
+
         try:
             if route == "SQL":
-                # À affiner: pour l'instant, on utilise une méthode générique
                 retrieved_docs = self.sql_retriever.get_context(question)
             elif route == "GRAPH":
                 retrieved_docs = self.graph_retriever.get_context(question)
             else: # VECTOR ou par défaut
                 retrieved_docs = self.vectorstore.similarity_search(question, k=self.config.top_k_docs)
+
+            # Stratégie de Fallback : si le retriever spécialisé ne trouve rien, on tente une recherche vectorielle.
+            if not retrieved_docs and route in ["SQL", "GRAPH"]:
+                print(f"⚠️ La route '{route}' n'a retourné aucun résultat. Fallback vers la recherche VECTOR.")
+                retrieved_docs = self.vectorstore.similarity_search(question, k=self.config.top_k_docs)
+                used_route = f"{route}_FALLBACK_VECTOR" # On note que le fallback a eu lieu
+
         except Exception as e:
-            print(f"⚠️ Erreur lors de la récupération via la route '{route}': {e}")
+            print(f"❌ Erreur lors de la récupération via la route '{route}': {e}. Fallback vers la recherche VECTOR.")
+            retrieved_docs = self.vectorstore.similarity_search(question, k=self.config.top_k_docs)
+            used_route = f"{route}_ERROR_FALLBACK_VECTOR"
 
         context['documents'].extend(retrieved_docs)
-        return context
-
-    # ... (les méthodes _generate_response_with_memory, _extract_sources et les méthodes de gestion de mémoire restent majoritairement les mêmes) ...
+        return context, used_route
 
     def _generate_response_with_memory(self, question: str, context: Dict[str, Any], session_id: str) -> str:
         """Génère la réponse avec le contexte conversationnel"""
+        
+        # Formatte le prompt système avec les informations de l'entreprise
+        system_prompt = self.system_prompt_template.format(
+            company_name=self.config.company_name,
+            company_sector=self.config.company_sector,
+            company_culture=self.config.company_culture,
+            location=self.config.location,
+            region_culture=self.config.region_culture,
+            language=self.config.language,
+
+        )
         
         full_context = ""
         
@@ -165,7 +176,7 @@ class SIRHRAGChain:
                     content = content[:500] + "..."
                 full_context += f"\n--- Source {i} ({source}) ---\n{content}\n"
         
-        prompt = f"""{self.system_prompt}
+        prompt = f"""{system_prompt}
 
 {full_context}
 
@@ -190,19 +201,22 @@ RÉPONSE (en français, utilise le contexte conversationnel et les données) :""
             sources.add(source)
         return list(sources)
 
-    # ... (les autres méthodes comme get_conversation_history, reindex_documents, etc. restent les mêmes) ...
     def get_conversation_history(self, session_id: str) -> List[Dict[str, Any]]:
         """Récupère l'historique d'une conversation"""
         return self.memory.get_conversation_history(session_id)
+
     def search_conversations(self, query: str) -> List[Dict[str, Any]]:
         """Recherche dans l'historique des conversations"""
         return self.memory.search_conversations(query)
+
     def get_memory_stats(self) -> Dict[str, Any]:
         """Statistiques de la mémoire conversationnelle"""
         return self.memory.get_memory_stats()
+
     def cleanup_memory(self):
         """Nettoie la mémoire"""
         self.memory.cleanup_old_conversations()
+
     def reindex_documents(self):
         """Réindexe tous les documents (pour mise à jour)"""
         print("Réindexation des documents...")
@@ -219,11 +233,15 @@ RÉPONSE (en français, utilise le contexte conversationnel et les données) :""
         except Exception as e:
             print(f"❌ Erreur lors de la réindexation: {e}")
             raise
+
     def get_system_info(self) -> Dict[str, Any]:
         """Retourne les informations système avec mémoire"""
         try:
-            vectorstore_stats = self.vectorstore.get_collection_stats()
-            db_summary = self.sql_retriever.get_database_summary()
+            # vectorstore_stats = self.vectorstore.get_collection_stats()
+            # Note: La méthode get_database_summary() n'existe pas dans sql_retriever.py,
+            #       il faudrait l'implémenter ou la retirer si elle n'est pas nécessaire.
+            # db_summary = self.sql_retriever.get_database_summary()
+            db_summary = {} # Placeholder
             memory_stats = self.get_memory_stats()
             
             return {

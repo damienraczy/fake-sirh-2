@@ -3,7 +3,7 @@ neo4j:
   uri: "neo4j://localhost:7687"
   user: "neo4j"
   password_file: "~/.neo4j_password"  # Fichier contenant le mot de passe
-  database: "sirh"
+  database: "neo4j"
   pool_config:
     max_connection_lifetime: 300
     max_connection_pool_size: 50
