@@ -1,7 +1,7 @@
 # Configuration du mapping SQLite → Neo4j
 database:
   sqlite_path: "db/experts_bois.sqlite"  # Sera surchargé par la config globale
-  neo4j_database: "neo4j"
+#   neo4j_database: "neo4j"
 
 # Mapping des entités (tables → nœuds)
 entities:
@@ -15,6 +15,9 @@ entities:
       - last_name: {type: "string", neo4j_property: "nom"}
       - email: {type: "string", neo4j_property: "email"}
       - hire_date: {type: "date", neo4j_property: "date_embauche"}
+      - conciousness: {type: "integer", neo4j_property: "conciousness"}
+      - cooperation: {type: "integer", neo4j_property: "cooperation"}
+      - flexibility: {type: "integer", neo4j_property: "flexibility"}
     
   organizational_unit:
     table: "organizational_unit"
@@ -167,3 +170,4 @@ sync_config:
   batch_size: 1000
   enable_parallel: true
   validation_after_import: true
+

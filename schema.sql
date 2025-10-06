@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS employee (
     email TEXT UNIQUE NOT NULL,
     hire_date DATE NOT NULL,
     manager_id INTEGER,
+    conciousness INTEGER, -- de 1 à 5
+    cooperation INTEGER, -- de 1 à 5
+    flexibility INTEGER, -- de 1 à 5
     FOREIGN KEY (manager_id) REFERENCES employee(id)
 );
 

@@ -40,8 +40,8 @@ def run_graph_sync():
         
     except ImportError:
         print("⚠️ Module rdb2graph non disponible. Installez les dépendances Neo4j.")
-    except Exception as e:
-        print(f"❌ Erreur synchronisation Neo4j: {e}")
+    # except Exception as e:
+    #     print(f"❌ Erreur synchronisation Neo4j: {e}")
 
 
 def run_rag_indexation():

@@ -28,7 +28,7 @@ class RAGConfig:
     
     # Paramètres RAG
     top_k_docs: int = 5
-    temperature: float = 0.1
+    temperature: float = 0.7
     max_tokens: int = 1000
     
     # Configuration interface
@@ -65,7 +65,7 @@ class RAGConfig:
             chunk_size=rag_config.get('chunk_size', 1000),
             chunk_overlap=rag_config.get('chunk_overlap', 200),
             top_k_docs=rag_config.get('top_k_docs', 5),
-            temperature=rag_config.get('temperature', 0.1),
+            temperature=rag_config.get('temperature', 0.7),
             max_tokens=rag_config.get('max_tokens', 1000),
             
             # Interface

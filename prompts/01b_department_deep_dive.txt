@@ -12,6 +12,9 @@ The response must be a valid JSON array of position objects. Each object must ha
 - "level": string (e.g., "Manager", "Senior Individual Contributor", "Individual Contributor", "Junior")
 - "reports_to": string (the title of the position it reports to)
 
+**Language:**
+- output in {language}
+
 The response must be a valid JSON object with the following structure:
 ```
 {{

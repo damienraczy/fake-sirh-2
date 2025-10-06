@@ -57,7 +57,6 @@ class Neo4jClient:
             result = session.run(query, parameters or {})
             return [record.data() for record in result]
 
-    # --- DEBUT DE LA MODIFICATION ---
     def get_schema_str(self) -> str:
         """
         Introspecte la base de données Neo4j pour générer une représentation textuelle
@@ -102,7 +101,6 @@ class Neo4jClient:
             schema_parts.extend(list(formatted_rels))
 
         return "\n".join(schema_parts)
-    # --- FIN DE LA MODIFICATION ---
 
     def get_database_stats(self) -> dict:
         """Récupérer les statistiques de la base"""

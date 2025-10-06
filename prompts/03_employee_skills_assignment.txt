@@ -20,6 +20,9 @@ Each skill assignment should have:
 4.  Assign a proficiency level for each skill: "Novice", "Intermediate", "Advanced", "Expert".
 5.  The output must be a valid JSON object containing a "skills" key, which holds an array of skill objects.
 
+**Language:**
+- output in {language}
+
 **Output Format:**
 ```json
 {{

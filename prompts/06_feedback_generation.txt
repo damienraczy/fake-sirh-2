@@ -24,4 +24,7 @@ Requirements:
 - Reflect company culture in tone
 - Include both positive aspects and development areas
 
+**Language:**
+- output in {language}
+
 Output only valid JSON.

@@ -1,0 +1,37 @@
+You are an expert HR data generator.
+
+For the employee profile below, generate a set of realistic HR documents.
+
+**Employee Profile:**
+- Employee: {employee_name}
+- Position: {position}
+- Sector: {sector}
+- Culture: {culture}
+
+**Instructions:**
+1.  Generate between 3 and 5 documents from the following types: CV, DIPLOMA, CERTIFICATION, TRAINING_CERTIFICATE.
+2.  There should be at most one CV.
+3.  The content of each document must be detailed, professional, and consistent with the employee's profile and the company's sector.
+4.  The final output **MUST** be a single, valid JSON object containing a key "documents", which holds a JSON array of document objects.
+5.  Each object in the array must have two keys: "document_type" and "content".
+
+**Language:**
+- output in {language}
+
+**MANDATORY OUTPUT FORMAT:**
+```json
+{{
+  "documents": [
+    {{
+      "document_type": "CV",
+      "content": "..."
+    }},
+    {{
+      "document_type": "DIPLOMA",
+      "content": "..."
+    }}
+  ]
+}}
+```
+
+Output only JSON.

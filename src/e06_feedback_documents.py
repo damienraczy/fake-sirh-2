@@ -8,6 +8,7 @@ from utils.llm_client import generate_json, LLMError
 from config import get_config
 from datetime import datetime, timedelta
 import random
+from uuid import uuid4 as uuid
 
 def run():
     """
@@ -61,7 +62,8 @@ def run():
             position=employee['position_title'] or "Employee",
             unit=employee['unit_name'] or "Unknown",
             culture=company_profile['culture'],
-            sector=company_profile['secteur']
+            sector=company_profile['secteur'],
+            language=company_profile['language'],
         )
         
         try:
@@ -98,7 +100,11 @@ def run():
             employee_name=employee_name,
             position=employee['position_title'] or "Employee",
             sector=company_profile['secteur'],
-            culture=company_profile['culture']
+            culture=company_profile['culture'],
+            language=company_profile['language'],
+            nb_diploma=random.randint(1, 2),
+            nb_certification=random.randint(0, 3),
+            nb_training_certificate=random.randint(2, 3),
         )
         
         try:
@@ -109,7 +115,7 @@ def run():
                 for doc in document_data['documents']:
                     if 'document_type' in doc and 'content' in doc:
                         # Créer le fichier document
-                        filename = f"emp_{employee['id']}_{doc['document_type'].lower()}.txt"
+                        filename = f"emp_{employee['id']}_{doc['document_type'].lower()}_{uuid()}.txt"
                         filepath = f"data/documents/{filename}"
                         
                         with open(filepath, 'w', encoding='utf-8') as f:

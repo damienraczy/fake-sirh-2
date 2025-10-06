@@ -8,6 +8,9 @@ Generate a realistic organizational structure for:
 - Departments: {departments}
 - Hierarchy levels: {hierarchy_levels}
 
+Language:
+- output in {language}
+
 Create a JSON response with:
 1. "organizational_units": Array of units with name and description
 2. "positions": Array of positions with title and description

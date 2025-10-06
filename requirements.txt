@@ -17,7 +17,15 @@ jinja2
 
 neo4j
 neo4j-haystack
+neo4j-graphrag
 haystack-ai
+neo4j-graphrag[ollama]
+# ollama: LLMs from Ollama
+# openai: LLMs from OpenAI (including AzureOpenAI)
+# google: LLMs from Vertex AI
+# cohere: LLMs from Cohere
+# anthropic: LLMs from Anthropic
+# mistralai: LLMs from MistralAI
 
 #
 # * **Linter - `pylint` ou `flake8`** :

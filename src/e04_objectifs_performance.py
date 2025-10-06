@@ -69,6 +69,7 @@ def run():
     # Récupérer tous les employés avec leurs informations incluant hire_date
     cursor.execute("""
         SELECT e.id, e.first_name, e.last_name, e.manager_id, e.hire_date,
+               e.conciousness, e.cooperation, e.flexibility,  
                p.title as position_title, ou.name as unit_name
         FROM employee e
         LEFT JOIN assignment a ON e.id = a.employee_id AND a.end_date IS NULL
@@ -88,6 +89,11 @@ def run():
     with open('prompts/04_performance_review.txt', 'r', encoding='utf-8') as f:
         review_prompt_template = f.read()
     
+    # Vider les objectifs et évaluations existants pour éviter les doublons
+    cursor.execute("DELETE FROM goal")
+    cursor.execute("DELETE FROM performance_review")
+    conn.commit()
+
     print("Génération des objectifs et évaluations...")
     
     goals_created = 0
@@ -100,6 +106,9 @@ def run():
         
         print(f"Traitement de {employee_name} (embauché le {hire_date})")
         
+        past_objective = None  # Pour stocker l'objectif de l'année précédente
+        goals_data = None
+
         # Générer les évaluations pour chaque année depuis l'embauche jusqu'à aujourd'hui
         for eval_year in range(hire_year, current_year + 1):
             evaluation_date = get_evaluation_date(eval_year, annual_reviews, hire_date)
@@ -113,8 +122,9 @@ def run():
                 print(f"  → {eval_year}: Évaluation future, ignorée")
                 continue  # Évaluation future, on ne la génère pas encore
             
-            print(f"  → {eval_year}: Génération évaluation")
+            print(f"  → {eval_year}: Génération objectif {employee_name} ")
             
+
             # Générer les objectifs (sauf pour le DG qui n'a pas de manager)
             if employee['manager_id']:
                 goals_prompt = goals_prompt_template.format(
@@ -146,6 +156,8 @@ def run():
                 except LLMError:
                     print(f"    ⚠ Échec objectifs pour {employee_name} ({eval_year})")
             
+            print(f"  → {eval_year}: Génération évaluation {employee_name} ")
+
             # Générer l'évaluation de performance
             review_prompt = review_prompt_template.format(
                 employee_name=employee_name,
@@ -157,6 +169,10 @@ def run():
                 sector=company_profile['secteur'],
                 location=company_profile['location'],
                 region_culture=company_profile['region_culture'],
+                conciousness=employee['conciousness'] or 3,
+                cooperation=employee['cooperation'] or 3,
+                flexibility=employee['flexibility'] or 3,
+                past_objective=past_objective or "No past objective available"
             )
             
             try:
@@ -171,9 +187,15 @@ def run():
                     """, (employee['id'], reviewer_id, eval_year, 
                           review_data['score'], review_data['comments']))
                     reviews_created += 1
-                
+
+
             except LLMError:
                 print(f"    ⚠ Échec évaluation pour {employee_name} ({eval_year})")
+
+        if goals_data and 'goals' in goals_data and goals_data['goals']:
+            past_objective = str(goals_data['goals'][0])
+        else:
+            past_objective = "No past objective available"
     
     conn.commit()
     conn.close()

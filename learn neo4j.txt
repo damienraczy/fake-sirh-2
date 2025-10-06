@@ -1,0 +1,48 @@
+http://127.0.0.1:7474/browser/
+
+MATCH (r)
+DELETE r;
+
+MATCH ()-[r:HAS_ADDRESS]-()
+DELETE r;
+
+SHOW CONSTRAINTS;
+DROP CONSTRAINT constraint_name;
+
+MATCH (a:Address {id: 123})
+REMOVE a:Address;
+
+
+CREATE CONSTRAINT person_id_idx FOR (n:Person) REQUIRE n.id IS UNIQUE;
+CREATE CONSTRAINT address_id_idx FOR (n:Address) REQUIRE n.id IS UNIQUE;
+CREATE INDEX person_name_idx FOR (n:Person) ON n.name;
+
+// Create all nodes first, one statement for each node
+CREATE (p:Person {id:1, name:'John Doe', gender:'Male'});
+CREATE (a1:Address {id:1, line1:'1 first ln', city:'Edison', state:'NJ', zip:'11111'});
+CREATE (a2:Address {id:2, line1:'13 second ln', city:'Edison', state:'NJ', zip:'11111'});
+CREATE (a3:Address {id:3, line1:'13 third ln', city:'Edison', state:'NJ', zip:'11111'});
+CREATE (a4:Address {id:4, line1:'1 fourth ln', city:'Edison', state:'NJ', zip:'11111'});
+CREATE (a5:Address {id:5, line1:'5 other ln', city:'Edison', state:'NJ', zip:'11111'});
+
+// Now, match the existing nodes and create the relationships
+MATCH (p:Person {id:1}), (a1:Address {id:1})
+CREATE (p)-[:HAS_ADDRESS {start:'2001-01-01', end:'2003-12-31'}]->(a1);
+
+MATCH (p:Person {id:1}), (a2:Address {id:2})
+CREATE (p)-[:HAS_ADDRESS {start:'2004-01-01', end:'2008-12-31'}]->(a2);
+
+MATCH (p:Person {id:1}), (a3:Address {id:3})
+CREATE (p)-[:HAS_ADDRESS {start:'2009-01-01', end:'2015-12-31'}]->(a3);
+
+MATCH (p:Person {id:1}), (a4:Address {id:4})
+CREATE (p)-[:HAS_ADDRESS {start:'2016-01-01', end:'2020-12-31'}]->(a4);
+
+MATCH (p:Person {id:1}), (a5:Address {id:5})
+CREATE (p)-[:HAS_ADDRESS {start:'2021-01-01'}]->(a5);
+
+
+MATCH (p:Person)-[r:HAS_ADDRESS]->(a:Address)
+RETURN p, r, a
+
+

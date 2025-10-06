@@ -109,3 +109,4 @@ class SQLiteExtractor:
         
         cursor = self.connection.execute(query)
         return [dict(row) for row in cursor.fetchall()]
+

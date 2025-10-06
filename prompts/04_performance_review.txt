@@ -10,23 +10,37 @@ Generate a performance review for:
 - Location: {location}
 - Regional culture: {region_culture}
 
+The employee's personality profile is characterized by:
+- conciousness={conciousness}/5
+- cooperation={cooperation}/5
+- flexibility={flexibility}/5
+
+Past objective is:
+"""
+{past_objective}
+"""
+
+
 IMPORTANT CONTEXT:
-- This is a performance review for the year {year} (may be a past year)
-- Generate comments that reflect the employee's performance during {year}
+- This is a performance review for the year {year}
+- Generate specific comments that reflect the employee's performance during {year}
 - Consider the business context and challenges specific to {year}
+- Ajusting the tone and ocntent to the personality profile (it is unlikely that 'excellent results' will be achieved if consciousness is low).
 - The review should feel authentic for that time period
+- Performance review should be specific and linked to past objective
 
 Create a JSON response with:
 - "score": Integer from 1 to 5 (1=Poor, 2=Below Expectations, 3=Meets Expectations, 4=Exceeds Expectations, 5=Outstanding)
-- "comments": Detailed performance review comments for the year {year}
+- "comments": Detailed performance review comments for the year {year}.
 
 Requirements:
-- Score should follow realistic distribution (most employees 3-4)
 - Comments should be professional, constructive, and specific to {year}
+- Comment should be closely related to past objective if specified.
 - Include strengths and areas for improvement relevant to {year}
 - Reflect company culture in tone and focus
 - Comments should be 100-200 words
-- Make the review feel authentic for the {year} evaluation period
+- Make the review feel authentic for the {year} evaluation period, regarding to past objective.
+- Score and comment MUST be consistant. Eg if comment is "outstanding" results, score should be 5.
 
 Language:
 - output in {language}

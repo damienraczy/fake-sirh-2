@@ -22,5 +22,8 @@ Requirements:
 - Realistic costs that fit budget constraints
 - Diverse duration and delivery methods
 
+**Language:**
+- output in {language}
+
 Output only valid JSON.
 

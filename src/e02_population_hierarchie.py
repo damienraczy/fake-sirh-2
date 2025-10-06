@@ -4,6 +4,7 @@ from utils.database import get_connection, close_connection
 from utils.llm_client import generate_json, LLMError
 from config import get_config
 from utils.names_generator import NamesGenerator
+from utils.utils import gaussian_score
 from datetime import datetime, timedelta
 import sqlite3
 import random
@@ -45,9 +46,13 @@ def _create_employee(
     except (LLMError, Exception) as e:
         print(f"⚠ Fallback LLM pour {prenom} {nom}: {e}")
 
+    conciousness = int(round(gaussian_score(3)))
+    cooperation = int(round(gaussian_score(3)))
+    flexibility = int(round(gaussian_score(3)))
+
     cursor.execute(
-        "INSERT INTO employee (first_name, last_name, email, hire_date, manager_id) VALUES (?, ?, ?, ?, ?)",
-        (prenom, nom, email, hire_date, manager_id)
+        "INSERT INTO employee (first_name, last_name, email, hire_date, manager_id, cooperation, cooperation, flexibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (prenom, nom, email, hire_date, manager_id, conciousness, cooperation, flexibility)
     )
     return cursor.lastrowid, hire_date
 

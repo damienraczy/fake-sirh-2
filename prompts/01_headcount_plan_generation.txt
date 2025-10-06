@@ -23,6 +23,9 @@ Based on the company profile provided below, generate a realistic hierarchical o
 6.  Distribute the headcount realistically, with more employees in operational roles than in management.
 7.  The `reports_to` field must accurately reflect the hierarchy. The top-level position's `reports_to` must be `null`.
 
+**Language:**
+- output in {language}
+
 **Output Format:**
 The output must be a single, valid JSON object. The structure must be as follows:
 
