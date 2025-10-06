@@ -11,16 +11,16 @@ import subprocess
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from config import load_config, get_config
-from src import e00_initialisation as etape0
-from src import e01_structure_organisationnelle as etape1
-from src import e02_population_hierarchie as etape2
-from src import e03_competences_referentiels as etape3
-from src import e04_objectifs_performance as etape4
-from src import e05_formations_developpement as etape5
-from src import e06_feedback_documents as etape6
-from utils.validation import validate_database
-from rdb2graph.core.sync_manager import SyncManager
+from core.config import load_config, get_config
+from data_generation.steps import e00_initialisation as etape0
+from data_generation.steps import e01_structure_organisationnelle as etape1
+from data_generation.steps import e02_population_hierarchie as etape2
+from data_generation.steps import e03_competences_referentiels as etape3
+from data_generation.steps import e04_objectifs_performance as etape4
+from data_generation.steps import e05_formations_developpement as etape5
+from data_generation.steps import e06_feedback_documents as etape6
+from data_generation.utils.validation import validate_database
+from graph_sync.core.sync_manager import SyncManager
 
 def run_graph_sync():
     """Étape 9: Synchronisation vers Neo4j"""

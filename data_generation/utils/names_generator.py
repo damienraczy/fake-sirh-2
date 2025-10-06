@@ -4,7 +4,7 @@
 
 import random
 from typing import Tuple, Set
-from utils.utils import normalize_string
+from utils.utils_llm import normalize_string
 
 class NamesGenerator:
     """

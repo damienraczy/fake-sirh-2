@@ -17,7 +17,7 @@ from rag.vectorstore import SIRHVectorStore
 from rag.document_loader import SIRHDocumentLoader
 from rag.sql_retriever import SIRHSQLRetriever
 from rag.memory import ConversationMemory
-from utils.llm_client import generate_text
+from data_generation.utils.llm_client import generate_text
 
 # NOUVEAUX IMPORTS
 from rag.router import SemanticRouter

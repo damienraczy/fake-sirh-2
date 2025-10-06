@@ -10,7 +10,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from utils.database import get_db_path
+from core.database import get_db_path
 
 def find_employee_with_manager(cursor):
     """
@@ -115,7 +115,7 @@ def generate_dataset():
 if __name__ == "__main__":
     # Assurez-vous que la configuration est chargée pour que get_db_path() fonctionne
     sys.path.insert(0, parent_dir)
-    from config import load_config
+    from core.config import load_config
     load_config('config.yaml')
     
     generate_dataset()

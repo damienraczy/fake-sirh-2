@@ -1,6 +1,6 @@
 # src/e01_structure_organisationnelle.py (simplifié)
-from utils.database import get_connection, close_connection
-from config import get_config
+from core.database import get_connection, close_connection
+from core.config import get_config
 
 def run():
     """

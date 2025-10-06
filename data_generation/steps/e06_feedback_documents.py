@@ -3,9 +3,9 @@
 # =============================================================================
 
 import os
-from utils.database import get_connection
-from utils.llm_client import generate_json, LLMError
-from config import get_config
+from core.database import get_connection
+from data_generation.utils.llm_client import generate_json, LLMError
+from core.config import get_config
 from datetime import datetime, timedelta
 import random
 
@@ -41,10 +41,10 @@ def run():
         return
     
     # Lire les prompts
-    with open('prompts/06_feedback_generation.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/06_feedback_generation.txt', 'r', encoding='utf-8') as f:
         feedback_prompt_template = f.read()
     
-    with open('prompts/06_document_generation.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/06_document_generation.txt', 'r', encoding='utf-8') as f:
         document_prompt_template = f.read()
     
     print("Génération des feedback et documents...")

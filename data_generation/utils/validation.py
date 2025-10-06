@@ -2,7 +2,7 @@
 # utils/validation.py
 # =============================================================================
 
-from utils.database import get_connection
+from core.database import get_connection
 
 def validate_database():
     """

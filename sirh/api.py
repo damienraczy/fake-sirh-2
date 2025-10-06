@@ -18,8 +18,8 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-from config import get_config, load_config
-from utils.database import get_connection
+from core.config import get_config, load_config
+from core.database import get_connection
 import sqlite3
 
 # =============================================================================

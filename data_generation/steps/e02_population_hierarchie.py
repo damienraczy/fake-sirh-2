@@ -1,9 +1,9 @@
 # src/e02_population_hierarchie.py (version corrigée et complète)
 import json
-from utils.database import get_connection, close_connection
-from utils.llm_client import generate_json, LLMError
-from config import get_config
-from utils.names_generator import NamesGenerator
+from core.database import get_connection, close_connection
+from data_generation.utils.llm_client import generate_json, LLMError
+from data_generation.utils.names_generator import NamesGenerator
+from core.config import get_config
 from datetime import datetime, timedelta
 import sqlite3
 import random
@@ -112,9 +112,9 @@ def run():
         cursor = conn.cursor()
         
         # 1. Lire les prompts
-        with open('prompts/01_headcount_plan_generation.txt', 'r', encoding='utf-8') as f:
+        with open('data_generation/prompts/01_headcount_plan_generation.txt', 'r', encoding='utf-8') as f:
             plan_prompt_template = f.read()
-        with open('prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
+        with open('data_generation/prompts/02_employee_generation.txt', 'r', encoding='utf-8') as f:
             employee_prompt_template = f.read()
             
         # 2. Préparer et appeler le LLM pour le plan

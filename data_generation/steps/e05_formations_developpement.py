@@ -2,9 +2,9 @@
 # src/e05_formations_developpement.py - Version respectant l'architecture existante
 # =============================================================================
 
-from utils.database import get_connection
-from utils.llm_client import generate_json, LLMError
-from config import get_config
+from core.database import get_connection
+from data_generation.utils.llm_client import generate_json, LLMError
+from core.config import get_config
 import random
 from datetime import datetime, timedelta
 
@@ -40,7 +40,7 @@ def update_employee_skills_from_training(cursor, employee_id: int, training_name
         return
     
     # Lire le prompt pour l'analyse des compétences
-    with open('prompts/05_skills_mapping.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/05_skills_mapping.txt', 'r', encoding='utf-8') as f:
         skills_prompt_template = f.read()
     
     skills_prompt = skills_prompt_template.format(
@@ -120,7 +120,7 @@ def run():
     cursor = conn.cursor()
     
     # Lire le prompt pour le catalogue de formations
-    with open('prompts/05_training_catalog.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/05_training_catalog.txt', 'r', encoding='utf-8') as f:
         catalog_prompt_template = f.read()
     
     catalog_prompt = catalog_prompt_template.format(
@@ -159,7 +159,7 @@ def run():
             return
         
         # Lire le prompt pour l'attribution des formations
-        with open('prompts/05_training_assignment.txt', 'r', encoding='utf-8') as f:
+        with open('data_generation/prompts/05_training_assignment.txt', 'r', encoding='utf-8') as f:
             assignment_prompt_template = f.read()
         
         print("Attribution des formations aux employés...")

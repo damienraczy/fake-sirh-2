@@ -18,7 +18,7 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-from config import get_config, load_config
+from core.config import get_config, load_config
 from rag.config import RAGConfig
 from rag.chain import SIRHRAGChain
 from rag.sql_retriever import SIRHSQLRetriever

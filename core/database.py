@@ -9,7 +9,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from config import get_config
+from core.config import get_config
 
 # Pool de connexions pour éviter les verrous
 _connection_pool = []

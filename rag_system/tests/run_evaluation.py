@@ -12,7 +12,7 @@ sys.path.insert(0, parent_dir)
 grand_parent_dir = os.path.dirname(parent_dir)
 sys.path.insert(0, grand_parent_dir)
 
-from config import load_config, get_config
+from core.config import load_config, get_config
 from rag.chain import SIRHRAGChain
 from rag.config import RAGConfig
 

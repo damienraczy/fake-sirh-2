@@ -2,9 +2,9 @@
 # src/e04_objectifs_performance.py - Version avec évaluations historiques
 # =============================================================================
 
-from utils.database import get_connection
-from utils.llm_client import generate_json, LLMError
-from config import get_config
+from core.database import get_connection
+from data_generation.utils.llm_client import generate_json, LLMError
+from core.config import get_config
 from datetime import datetime, timedelta
 import random
 
@@ -82,10 +82,10 @@ def run():
         return
     
     # Lire les prompts
-    with open('prompts/04_goals_generation.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/04_goals_generation.txt', 'r', encoding='utf-8') as f:
         goals_prompt_template = f.read()
     
-    with open('prompts/04_performance_review.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/04_performance_review.txt', 'r', encoding='utf-8') as f:
         review_prompt_template = f.read()
     
     print("Génération des objectifs et évaluations...")

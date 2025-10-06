@@ -6,7 +6,7 @@ import sqlite3
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import re
-from utils.llm_client import generate_text # Assurez-vous que generate_text est importé
+from data_generation.utils.llm_client import generate_text # Assurez-vous que generate_text est importé
 
 class SIRHSQLRetriever:
     def __init__(self, config):

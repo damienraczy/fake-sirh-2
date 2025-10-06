@@ -1,6 +1,6 @@
 # rag/graph_retriever.py
 from typing import List, Dict, Any
-from utils.llm_client import generate_text
+from data_generation.utils.llm_client import generate_text
 # Importer votre client Neo4j
 from rdb2graph.utils.neo4j_client import Neo4jClient
 

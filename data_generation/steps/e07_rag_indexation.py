@@ -11,7 +11,7 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-from config import get_config
+from core.config import get_config
 
 def run():
     """
@@ -34,7 +34,7 @@ def run():
 
 if __name__ == "__main__":
     # Permet de tester l'étape individuellement
-    from config import load_config
+    # from core.config import load_config
     
     # Charger la configuration par défaut
     load_config('config.yaml')

@@ -2,8 +2,8 @@
 # src/e00_initialisation.py
 # =============================================================================
 
-from utils.database import create_database
 
+from core.database import create_database
 def run(schema_path):
     """
     Étape 0: Initialisation de la base de données

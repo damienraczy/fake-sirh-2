@@ -2,9 +2,9 @@
 # src/e03_competences_referentiels.py (version complète)
 # =============================================================================
 
-from utils.database import get_connection
-from utils.llm_client import generate_json, LLMError
-from config import get_config
+from core.database import get_connection
+from data_generation.utils.llm_client import generate_json, LLMError
+from core.config import get_config
 
 def run():
     """
@@ -20,7 +20,7 @@ def run():
     cursor = conn.cursor()
     
     # Lire le prompt pour les compétences
-    with open('prompts/03_skills_generation.txt', 'r', encoding='utf-8') as f:
+    with open('data_generation/prompts/03_skills_generation.txt', 'r', encoding='utf-8') as f:
         prompt_template = f.read()
     
     prompt = prompt_template.format(
@@ -67,7 +67,7 @@ def run():
         # Générer les compétences pour chaque employé
         print("Attribution des compétences aux employés...")
         
-        with open('prompts/03_employee_skills_assignment.txt', 'r', encoding='utf-8') as f:
+        with open('data_generation/prompts/03_employee_skills_assignment.txt', 'r', encoding='utf-8') as f:
             assignment_prompt_template = f.read()
         
         total_assignments = 0
