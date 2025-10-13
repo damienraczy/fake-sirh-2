@@ -1,0 +1,30 @@
+pylint # analyseur de code : `pylint votre_module.py` ou `pylint mon_package/`
+flake8 # analyseur de code : `flake8 votre_module.py` ou `flake8 mon_package/`
+black # * **Formatter de source python** :
+
+pyyaml
+requests
+python-dotenv
+python-dateutil
+Unidecode
+
+fastapi
+uvicorn
+
+pydantic
+jinja2
+
+neo4j
+neo4j-haystack
+haystack-ai
+
+
+langchain<1.0
+langchain-openai
+langchain-community
+langchain-experimental
+langchain-core
+langchain-neo4j
+
+sentence-transformers
+chromadb

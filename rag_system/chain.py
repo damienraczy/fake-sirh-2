@@ -11,17 +11,17 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-from rag.config import RAGConfig
-from rag.embeddings import SIRHEmbeddings
-from rag.vectorstore import SIRHVectorStore
-from rag.document_loader import SIRHDocumentLoader
-from rag.sql_retriever import SIRHSQLRetriever
-from rag.memory import ConversationMemory
+from rag_system.config import RAGConfig
+from rag_system.components.embeddings import SIRHEmbeddings
+from rag_system.components.vectorstore import SIRHVectorStore
+from rag_system.document_loader import SIRHDocumentLoader
+from rag_system.sql_retriever import SIRHSQLRetriever
+from rag_system.memory import ConversationMemory
 from data_generation.utils.llm_client import generate_text
 
 # NOUVEAUX IMPORTS
-from rag.router import SemanticRouter
-from rag.graph_retriever import SIRHGraphRetriever
+from rag_system.components.router import SemanticRouter
+from rag_system.graph_retriever import SIRHGraphRetriever
 
 class SIRHRAGChain:
     """Chaîne RAG principale avec routage sémantique et mémoire"""

@@ -2,7 +2,7 @@
 from typing import List, Dict, Any
 from data_generation.utils.llm_client import generate_text
 # Importer votre client Neo4j
-from rdb2graph.utils.neo4j_client import Neo4jClient
+from graph_sync.utils.neo4j_client import Neo4jClient
 
 class SIRHGraphRetriever:
     def __init__(self, config):

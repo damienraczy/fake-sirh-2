@@ -22,6 +22,9 @@ from data_generation.steps import e06_feedback_documents as etape6
 from data_generation.utils.validation import validate_database
 from graph_sync.core.sync_manager import SyncManager
 
+from rag_system.chain import SIRHRAGChain
+from rag_system.config import RAGConfig
+
 def run_graph_sync():
     """Étape 9: Synchronisation vers Neo4j"""
     print("\n=== ÉTAPE 9: Synchronisation Neo4j ===")
@@ -48,8 +51,6 @@ def run_rag_indexation():
     """Étape 7: Indexation RAG"""
     print("Étape 7: Indexation RAG des données")
     try:
-        from rag.chain import SIRHRAGChain
-        from rag.config import RAGConfig
         
         base_config = get_config()
         rag_config = RAGConfig.from_base_config(base_config)
