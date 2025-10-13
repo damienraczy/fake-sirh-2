@@ -15,7 +15,7 @@ class SIRHGraphRetriever:
     def _load_cypher_prompt(self) -> str:
         # Idéalement, ce prompt serait dans un fichier "prompts/text_to_cypher.txt"
         cypher_prompt = ""
-        with open('rag/prompts/load_cypher_prompt.txt', 'r', encoding='utf-8') as f:
+        with open('rag_system/prompts/load_cypher_prompt.txt', 'r', encoding='utf-8') as f:
             cypher_prompt = f.read()
         return cypher_prompt
 

@@ -31,7 +31,7 @@ l'expert (la source de données) le plus qualifié.
 
 ### Comment fonctionne-t-il ?
 1.  **Analyse de l'Intention** : Lorsqu'une question est posée, le routeur la compare à
-une série d'exemples prédéfinis (`rag/router_config.yaml`).
+une série d'exemples prédéfinis (`rag_system/router_config.yaml`).
 2.  **Prise de Décision** :
     * Si la question ressemble fortement à une demande de comptage ou de liste (ex:
 "Combien...", "Liste tous les..."), elle est dirigée vers la source **SQL**.
@@ -58,16 +58,16 @@ du projet.
 
 ### b. Prévention des Injections SQL
 Toutes les requêtes SQL générées par le LLM sont validées avant exécution. La méthode
-`_is_safe_query` dans le `SQLRetriever` (`rag/sql_retriever.py`) assure que **seules les
+`_is_safe_query` dans le `SQLRetriever` (`rag_system/sql_retriever.py`) assure que **seules les
 requêtes de lecture (`SELECT`) sont autorisées**. Toute tentative d'écriture, de
 modification ou de suppression de données (`INSERT`, `UPDATE`, `DELETE`, `DROP`, etc.) est
 systématiquement bloquée.
 
 ### c. Prévention des Modifications du Graphe
 De la même manière, le prompt de génération des requêtes Cypher
-(`rag/prompts/load_cypher_prompt.txt`) instruit explicitement le LLM de n'utiliser que des
+(`rag_system/prompts/load_cypher_prompt.txt`) instruit explicitement le LLM de n'utiliser que des
 commandes de lecture (`MATCH`). De plus, une vérification dans le code du `GraphRetriever`
-(`rag/graph_retriever.py`) bloque toute requête contenant des mots-clés de modification
+(`rag_system/graph_retriever.py`) bloque toute requête contenant des mots-clés de modification
 (`CREATE`, `MERGE`, `DELETE`).
 
 ### d. Pas de Persistance des Données Sensibles
