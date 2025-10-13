@@ -8,7 +8,7 @@ from ..utils.validation import GraphValidator
 class SyncManager:
     """Gestionnaire de synchronisation SQLite → Neo4j"""
     
-    def __init__(self, config_dir: str = "rdb2graph/config"):
+    def __init__(self, config_dir: str = "graph_sync/config"):
         self.config_dir = Path(config_dir)
         self.mapping_config = self._load_yaml(self.config_dir / "mapping.yaml")
         self.neo4j_config = self._load_yaml(self.config_dir / "neo4j_config.yaml")

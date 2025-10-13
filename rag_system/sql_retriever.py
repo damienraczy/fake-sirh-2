@@ -18,7 +18,7 @@ class SIRHSQLRetriever:
         """Charge le prompt de conversion texte vers SQL."""
         # Ce prompt pourrait être dans un fichier "prompts/text_to_sql.txt"
         sql_prompt = ""
-        with open('rag/prompts/load_sql_prompt.txt', 'r', encoding='utf-8') as f:
+        with open('rag_system/prompts/load_sql_prompt.txt', 'r', encoding='utf-8') as f:
             sql_prompt = f.read()
         return sql_prompt
 

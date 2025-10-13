@@ -6,7 +6,7 @@ import yaml
 class Neo4jClient:
     """Client Neo4j réutilisable"""
     
-    def __init__(self, config_path: str = "rdb2graph/config/neo4j_config.yaml"):
+    def __init__(self, config_path: str = "graph_sync/config/neo4j_config.yaml"):
         self.config = self._load_config(config_path)
         self.driver = None
         self.connect() # Connexion directe à l'initialisation

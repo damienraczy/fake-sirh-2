@@ -1,0 +1,80 @@
+# Configuration du routeur sémantique pour le système RAG SIRH
+# Ce fichier définit les règles de routage des requêtes vers les différentes sources de données
+
+# Modèle d'embedding pour le routeur (doit correspondre au modèle RAG)
+embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+
+# Seuil de similarité pour matcher une règle (0.0 à 1.0)
+similarity_threshold: 0.65
+
+# Route par défaut si aucune règle ne matche
+default_route: "VECTOR"
+
+# Règles de routage
+rules:
+  # Route SQL : Pour les comptages, statistiques, listes
+  - destination: "SQL"
+    intent_examples:
+      - "Combien d'employés travaillent en Production ?"
+      - "Combien d'employés dans le département Production ?"
+      - "Nombre d'employés par département"
+      - "Liste tous les employés du département Production"
+      - "Quels sont les employés en Production ?"
+      - "Donne-moi la liste des employés"
+      - "Combien de personnes travaillent ici ?"
+      - "Quel est le nombre total d'employés ?"
+      - "Statistiques par département"
+      - "Répartition des effectifs"
+      - "Combien de formations ont été suivies ?"
+      - "Nombre de compétences dans la base"
+      - "Liste des départements"
+      - "Quels sont les top performers ?"
+      - "Employés avec la compétence Python"
+      - "Qui a suivi la formation sécurité ?"
+      - "Liste des managers"
+      - "Combien d'évaluations en 2024 ?"
+
+  # Route GRAPH : Pour les relations hiérarchiques et organisationnelles
+  - destination: "GRAPH"
+    intent_examples:
+      - "Qui est le manager de Nathan Naisseline ?"
+      - "Qui manage Nathan Naisseline ?"
+      - "Quel est le supérieur de Nathan ?"
+      - "Qui est le chef de Nathan ?"
+      - "À qui Nathan rapporte ?"
+      - "Qui supervise Nathan ?"
+      - "Montre-moi la hiérarchie de Nathan"
+      - "Quelle est l'équipe de John ?"
+      - "Qui travaille sous John ?"
+      - "Liste des subordonnés de John"
+      - "Qui sont les collaborateurs directs de Marie ?"
+      - "Structure hiérarchique du département"
+      - "Organigramme de l'équipe"
+      - "Relations managériales"
+      - "Qui rapporte à qui ?"
+      - "Chaîne de commandement"
+
+  # Route VECTOR : Pour les questions sémantiques, résumés, recherche dans documents
+  - destination: "VECTOR"
+    intent_examples:
+      - "Fais-moi un résumé du dernier entretien de performance de Samuel Ahmat"
+      - "Résumé de l'évaluation de Samuel"
+      - "Quels sont les points forts de Samuel ?"
+      - "Feedback sur Samuel"
+      - "Commentaires d'évaluation de Samuel"
+      - "Parcours professionnel de Marie"
+      - "Expérience de Marie"
+      - "CV de Marie"
+      - "Diplômes de Marie"
+      - "Formations suivies par Pierre"
+      - "Quelles compétences possède Alice ?"
+      - "Profil complet de Jean"
+      - "Objectifs de performance de Laura"
+      - "Quels sont les défis RH de l'entreprise ?"
+      - "Culture d'entreprise"
+      - "Valeurs de l'entreprise"
+      - "Budget formation"
+      - "Politique RH"
+      - "Trouve-moi des informations sur la sécurité au travail"
+      - "Contenu de la formation leadership"
+      - "Description du poste de chef de projet"

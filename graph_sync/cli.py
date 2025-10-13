@@ -13,15 +13,15 @@ def main():
     sync_parser = subparsers.add_parser('sync', help='Synchroniser les données')
     sync_parser.add_argument('--sqlite-path', required=True, help='Chemin vers la base SQLite')
     sync_parser.add_argument('--mode', choices=['full', 'incremental'], default='full')
-    sync_parser.add_argument('--config-dir', default='rdb2graph/config', help='Répertoire de configuration')
+    sync_parser.add_argument('--config-dir', default='graph_sync/config', help='Répertoire de configuration')
     
     # Commande stats
     stats_parser = subparsers.add_parser('stats', help='Afficher les statistiques')
-    stats_parser.add_argument('--config-dir', default='rdb2graph/config')
+    stats_parser.add_argument('--config-dir', default='graph_sync/config')
     
     # Commande validate
     validate_parser = subparsers.add_parser('validate', help='Valider le graphe')
-    validate_parser.add_argument('--config-dir', default='rdb2graph/config')
+    validate_parser.add_argument('--config-dir', default='graph_sync/config')
     
     args = parser.parse_args()
     
