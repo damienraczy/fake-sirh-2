@@ -19,6 +19,7 @@ from data_generation.steps import e03_competences_referentiels as etape3
 from data_generation.steps import e04_objectifs_performance as etape4
 from data_generation.steps import e05_formations_developpement as etape5
 from data_generation.steps import e06_feedback_documents as etape6
+from data_generation.steps import e08_neo4j_sync as etape8
 from data_generation.utils.validation import validate_database
 from graph_sync.core.sync_manager import SyncManager
 
@@ -108,7 +109,7 @@ def main():
         '5': etape5.run,
         '6': etape6.run,
         '7': run_rag_indexation,
-        '8': run_graph_sync  # Nouvelle étape
+        '8': etape8.run  # Nouvelle étape
     }
 
     # Exécution des étapes

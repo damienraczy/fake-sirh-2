@@ -7,6 +7,7 @@ from data_generation.utils.llm_client import generate_json, LLMError
 from core.config import get_config
 import random
 from datetime import datetime, timedelta
+import uuid
 
 def generate_training_date(year: int, hire_date: str) -> str:
     """Génère une date de formation aléatoire dans l'année."""

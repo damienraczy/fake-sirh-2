@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+# =============================================================================
+# main.py - Générateur de données SIRH complet
+# =============================================================================
+
+import argparse
+import sys
+import time
+from pathlib import Path
+from typing import List
+
+# Ajouter le répertoire courant au path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from core.config import load_config, get_config
+
+# =============================================================================
+# Configuration des étapes
+# =============================================================================
+
+STEPS = {
+    0: {
+        'name': 'Initialisation',
+        'module': 'data_generation.steps.e00_initialisation',
+        'description': 'Initialisation de la base de données',
+        'required': True
+    },
+    1: {
+        'name': 'Structure organisationnelle',
+        'module': 'data_generation.steps.e01_structure_organisationnelle',
+        'description': 'Création des unités organisationnelles',
+        'dependencies': [0]
+    },
+    2: {
+        'name': 'Population et hiérarchie',
+        'module': 'data_generation.steps.e02_population_hierarchie',
+        'description': 'Génération des employés et de la hiérarchie',
+        'dependencies': [0, 1]
+    },
+    3: {
+        'name': 'Compétences',
+        'module': 'data_generation.steps.e03_competences_referentiels',
+        'description': 'Génération des compétences et référentiels',
+        'dependencies': [0, 1, 2]
+    },
+    4: {
+        'name': 'Objectifs et performance',
+        'module': 'data_generation.steps.e04_objectifs_performance',
+        'description': 'Génération des objectifs et évaluations',
+        'dependencies': [0, 1, 2]
+    },
+    5: {
+        'name': 'Formations',
+        'module': 'data_generation.steps.e05_formations_developpement',
+        'description': 'Génération des formations et développement',
+        'dependencies': [0, 1, 2, 3]
+    },
+    6: {
+        'name': 'Feedback et documents',
+        'module': 'data_generation.steps.e06_feedback_documents',
+        'description': 'Génération des feedback et documents',
+        'dependencies': [0, 1, 2]
+    },
+    7: {
+        'name': 'Indexation RAG',
+        'module': 'data_generation.steps.e07_rag_indexation',
+        'description': 'Indexation des données pour le RAG',
+        'dependencies': [0, 1, 2, 3, 4, 5, 6]
+    },
+    8: {
+        'name': 'Synchronisation Neo4j',
+        'module': 'data_generation.steps.e08_neo4j_sync',
+        'description': 'Synchronisation vers Neo4j',
+        'dependencies': [0, 1, 2, 3, 4, 5, 6]
+    }
+}
+
+# =============================================================================
+# Fonctions utilitaires
+# =============================================================================
+
+def print_banner():
+    """Affiche la bannière de démarrage"""
+    print("=" * 70)
+    print(" " * 15 + "🏢 GÉNÉRATEUR DE DONNÉES SIRH")
+    print("=" * 70)
+    print()
+
+def print_step_header(step_num: int, step_info: dict):
+    """Affiche l'en-tête d'une étape"""
+    print("\n" + "─" * 70)
+    print(f"ÉTAPE {step_num}: {step_info['name'].upper()}")
+    print(f"Description: {step_info['description']}")
+    print("─" * 70)
+
+def print_summary(executed_steps: List[int], total_time: float, errors: dict):
+    """Affiche le résumé de l'exécution"""
+    print("\n" + "=" * 70)
+    print(" " * 25 + "📊 RÉSUMÉ")
+    print("=" * 70)
+    print(f"\n✅ Étapes exécutées: {len(executed_steps)}/{len(STEPS)}")
+    print(f"⏱️  Temps total: {total_time:.2f}s ({total_time/60:.2f}min)")
+    
+    if errors:
+        print(f"\n❌ Erreurs: {len(errors)}")
+        for step_num, error in errors.items():
+            print(f"   • Étape {step_num}: {error}")
+    else:
+        print("\n✅ Toutes les étapes ont été exécutées avec succès!")
+    
+    print("\n" + "=" * 70)
+
+def validate_dependencies(steps_to_run: List[int]) -> List[int]:
+    """Valide et complète les dépendances des étapes"""
+    required_steps = set(steps_to_run)
+    
+    # Ajouter les dépendances
+    for step_num in steps_to_run:
+        if step_num in STEPS and 'dependencies' in STEPS[step_num]:
+            required_steps.update(STEPS[step_num]['dependencies'])
+    
+    # Toujours inclure l'étape 0 (initialisation)
+    required_steps.add(0)
+    
+    return sorted(list(required_steps))
+
+def import_step_module(module_name: str):
+    """Importe dynamiquement un module d'étape"""
+    try:
+        module = __import__(module_name, fromlist=['run'])
+        return module
+    except ImportError as e:
+        raise ImportError(f"Impossible d'importer le module {module_name}: {e}")
+
+def execute_step(step_num: int, step_info: dict) -> tuple:
+    """Exécute une étape et retourne (succès, temps, erreur)"""
+    try:
+        print_step_header(step_num, step_info)
+        
+        # Import dynamique du module
+        module = import_step_module(step_info['module'])
+        
+        # Exécuter l'étape avec chronométrage
+        start_time = time.time()
+        module.run()
+        execution_time = time.time() - start_time
+        
+        print(f"\n✅ Étape {step_num} terminée en {execution_time:.2f}s")
+        return True, execution_time, None
+        
+    except Exception as e:
+        print(f"\n❌ Erreur lors de l'étape {step_num}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, 0, str(e)
+
+# =============================================================================
+# Fonction principale
+# =============================================================================
+
+def main():
+    """Point d'entrée principal"""
+    # Parser les arguments
+    parser = argparse.ArgumentParser(
+        description='Générateur de données SIRH avec 8 étapes',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Exemples d'utilisation:
+  %(prog)s --all                    # Exécuter toutes les étapes
+  %(prog)s 0 1 2                    # Exécuter les étapes 0, 1 et 2
+  %(prog)s --from 3 --to 5          # Exécuter les étapes 3 à 5
+  %(prog)s --yaml custom_config.yaml # Utiliser une config personnalisée
+  %(prog)s --all --raz              # Tout régénérer (avec RAZ de la BD)
+
+Liste des étapes:
+  0: Initialisation de la base de données
+  1: Structure organisationnelle
+  2: Population et hiérarchie
+  3: Compétences et référentiels
+  4: Objectifs et performance
+  5: Formations et développement
+  6: Feedback et documents
+  7: Indexation RAG
+  8: Synchronisation Neo4j
+        """
+    )
+    
+    # Arguments de sélection des étapes
+    parser.add_argument('steps', nargs='*', type=int, 
+                       help='Numéros des étapes à exécuter (0-8)')
+    parser.add_argument('--all', action='store_true',
+                       help='Exécuter toutes les étapes')
+    parser.add_argument('--from', dest='from_step', type=int,
+                       help='Étape de départ (inclusive)')
+    parser.add_argument('--to', dest='to_step', type=int,
+                       help='Étape de fin (inclusive)')
+    
+    # Arguments de configuration
+    parser.add_argument('--yaml', dest='config_file', default='config.yaml',
+                       help='Fichier de configuration YAML (défaut: config.yaml)')
+    parser.add_argument('--raz', action='store_true',
+                       help='Forcer la réinitialisation complète (RAZ de la BD)')
+    
+    # Arguments d'affichage
+    parser.add_argument('--list', action='store_true',
+                       help='Lister les étapes disponibles et quitter')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                       help='Mode verbeux')
+    
+    args = parser.parse_args()
+    
+    # Lister les étapes et quitter
+    if args.list:
+        print("Étapes disponibles:")
+        for num, info in STEPS.items():
+            deps = f" (dépend de: {info.get('dependencies', [])})" if info.get('dependencies') else ""
+            print(f"  {num}: {info['name']} - {info['description']}{deps}")
+        return 0
+    
+    # Charger la configuration
+    try:
+        load_config(args.config_file)
+        config = get_config()
+        print(f"✅ Configuration chargée depuis: {args.config_file}")
+        print(f"   Entreprise: {config['entreprise']['nom']}")
+        print(f"   Secteur: {config['entreprise']['secteur']}")
+        print(f"   Taille: {config['entreprise']['taille']} employés")
+    except Exception as e:
+        print(f"❌ Erreur lors du chargement de la configuration: {e}")
+        return 1
+    
+    # Déterminer les étapes à exécuter
+    steps_to_run = []
+    
+    if args.all:
+        steps_to_run = list(STEPS.keys())
+    elif args.from_step is not None and args.to_step is not None:
+        steps_to_run = list(range(args.from_step, args.to_step + 1))
+    elif args.from_step is not None:
+        steps_to_run = list(range(args.from_step, max(STEPS.keys()) + 1))
+    elif args.to_step is not None:
+        steps_to_run = list(range(0, args.to_step + 1))
+    elif args.steps:
+        steps_to_run = args.steps
+    else:
+        print("❌ Aucune étape spécifiée. Utilisez --all, --from/--to, ou spécifiez des numéros d'étapes.")
+        print("   Utilisez --help pour voir les options disponibles.")
+        return 1
+    
+    # Valider et compléter les dépendances
+    steps_to_run = validate_dependencies(steps_to_run)
+    
+    # Vérifier que les étapes existent
+    invalid_steps = [s for s in steps_to_run if s not in STEPS]
+    if invalid_steps:
+        print(f"❌ Étapes invalides: {invalid_steps}")
+        print(f"   Étapes valides: {list(STEPS.keys())}")
+        return 1
+    
+    # Afficher le plan d'exécution
+    print_banner()
+    print("📋 Plan d'exécution:")
+    for step_num in steps_to_run:
+        print(f"   • Étape {step_num}: {STEPS[step_num]['name']}")
+    print()
+    
+    if args.raz:
+        print("⚠️  MODE RAZ: La base de données sera réinitialisée!")
+        response = input("Continuer? (oui/non): ")
+        if response.lower() not in ['oui', 'o', 'yes', 'y']:
+            print("Opération annulée.")
+            return 0
+        # L'étape 0 gère la RAZ automatiquement
+    
+    # Exécuter les étapes
+    print("\n🚀 Démarrage de l'exécution...")
+    
+    total_start_time = time.time()
+    executed_steps = []
+    errors = {}
+    
+    for step_num in steps_to_run:
+        success, exec_time, error = execute_step(step_num, STEPS[step_num])
+        
+        if success:
+            executed_steps.append(step_num)
+        else:
+            errors[step_num] = error
+            
+            # Demander si on continue après une erreur
+            print("\n⚠️  Une erreur s'est produite.")
+            response = input("Continuer avec les étapes suivantes? (oui/non): ")
+            if response.lower() not in ['oui', 'o', 'yes', 'y']:
+                print("Exécution interrompue.")
+                break
+    
+    total_time = time.time() - total_start_time
+    
+    # Afficher le résumé
+    print_summary(executed_steps, total_time, errors)
+    
+    # Informations post-exécution
+    if 7 in executed_steps:
+        print("\n💡 Système RAG:")
+        print("   • Démarrer l'API: python rag_system/start_rag_api.py")
+        print("   • URL: http://localhost:8000")
+    
+    if 8 in executed_steps:
+        print("\n💡 Neo4j:")
+        print("   • Browser: http://localhost:7474")
+        print("   • Explorer la hiérarchie: MATCH (e:Employee)-[:MANAGES]->(s) RETURN e, s LIMIT 25")
+    
+    # Code de sortie
+    return 0 if not errors else 1
+
+# =============================================================================
+# Point d'entrée
+# =============================================================================
+
+if __name__ == "__main__":
+    sys.exit(main())

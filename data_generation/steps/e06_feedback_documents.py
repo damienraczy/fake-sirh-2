@@ -8,6 +8,7 @@ from data_generation.utils.llm_client import generate_json, LLMError
 from core.config import get_config
 from datetime import datetime, timedelta
 import random
+from uuid import uuid4
 
 def run():
     """
@@ -109,7 +110,8 @@ def run():
                 for doc in document_data['documents']:
                     if 'document_type' in doc and 'content' in doc:
                         # Créer le fichier document
-                        filename = f"emp_{employee['id']}_{doc['document_type'].lower()}.txt"
+                        # Utiliser UUID pour garantir l'unicité du nom de fichier
+                        filename = f"emp_{employee['id']}_{doc['document_type'].lower()}_{uuid4().hex}.txt"
                         filepath = f"data/documents/{filename}"
                         
                         with open(filepath, 'w', encoding='utf-8') as f:
